@@ -321,5 +321,26 @@ if(!v41HasAccount()){v41ShowSetup('FIRST-RUN MODE • เครื่องน�
 
 })();
 </script>
+  <!-- Include this in your index.html -->
+<script type="module">
+  // Import the Firebase app functions you need
+  import { initializeApp } from "https://gstatic.com";
+
+  // Your exact Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyBi2-gI4R2hfEXEY2pyZr67jhpdVXEOt4k",
+    authDomain: "tupp-homework-ai.firebaseapp.com",
+    projectId: "tupp-homework-ai",
+    storageBucket: "tupp-homework-ai.firebasestorage.app",
+    messagingSenderId: "472435152177",
+    appId: "1:472435152177:web:fc7cb9678163e5c9b74c10", // Keep this web ID here so the HTML code works!
+    measurementId: "G-51XL8R5BRQ"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  console.log("Firebase is ready to go inside the APK!");
+</script>
+
 </body>
 </html>
