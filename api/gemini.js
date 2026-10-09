@@ -1,5 +1,12 @@
 const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first assistant for students, teachers, and school staff. Answer broad educational and general knowledge questions accurately and clearly. For current or uncertain facts, state uncertainty and recommend verification. Never claim to be an official school or government authority. For homework, teach step-by-step and encourage understanding. Keep student privacy in mind and do not reveal private student records.`;
 
+const FALLBACK_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-2.0-flash-lite'
+];
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -9,8 +16,6 @@ export default async function handler(req, res) {
   if (!apiKey) {
     return res.status(503).json({ error: 'GEMINI_API_KEY is not configured in environment variables' });
   }
-
-  const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
   try {
     let body;
@@ -34,33 +39,48 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing prompt or contents in request body' });
     }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey
-        },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents,
-          generationConfig: { temperature: 0.4, maxOutputTokens: 2048 }
-        })
+    const requestedModel = process.env.GEMINI_MODEL;
+    const modelsToTry = requestedModel 
+      ? [requestedModel, ...FALLBACK_MODELS.filter(m => m !== requestedModel)]
+      : FALLBACK_MODELS;
+
+    let lastError = null;
+
+    for (const modelName of modelsToTry) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey
+            },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+              contents,
+              generationConfig: { temperature: 0.4, maxOutputTokens: 2048 }
+            })
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+          return res.status(200).json({ text, model: modelName });
+        } else {
+          lastError = data?.error?.message || `HTTP ${response.status} for model ${modelName}`;
+        }
+      } catch (err) {
+        lastError = err?.message || String(err);
       }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: data?.error?.message || 'Gemini API internal error',
-        details: data?.error || null
-      });
     }
 
-    const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
-    return res.status(200).json({ text, model });
+    return res.status(500).json({
+      error: `Gemini API error across attempted models: ${lastError}`,
+      attemptedModels: modelsToTry
+    });
   } catch (e) {
     return res.status(500).json({ error: e?.message || 'Server internal error' });
   }
