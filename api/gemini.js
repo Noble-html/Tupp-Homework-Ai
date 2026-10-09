@@ -2,9 +2,9 @@ const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first assistant 
 
 const FALLBACK_MODELS = [
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash-latest',
-  'gemini-2.0-flash-lite'
+  'gemini-3.5-flash-lite',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-pro'
 ];
 
 export default async function handler(req, res) {
