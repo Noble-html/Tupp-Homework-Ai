@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['rachata.le@gmail.com', '06554@tupp.ac.th'];
+    }
+
+    function isCouncil() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/councilMembers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/councilMembers/$(request.auth.uid)).data.active == true;
+    }
+
+    match /homework/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.studentId is string
+        && request.resource.data.title is string;
+      allow update, delete: if isAdmin() || isCouncil()
+        || (signedIn() && resource.data.createdBy == request.auth.uid);
+    }
+
+    match /councilMembers/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    match /system/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /audit/{id} {
+      allow create: if signedIn() && request.resource.data.actorUid == request.auth.uid;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
