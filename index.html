@@ -24,7 +24,8 @@ const LEGACY_COUNCIL_REGISTRY=[
 ];
 const state={app:null,auth:null,db:null,fb:{configured:false,booted:false,persistence:'not-initialized',retryCount:0,lastError:'',lastSuccessAt:null,activeListeners:0},listeners:new Set()};
 const cfgKey='tupp_ai_v43_firebase_config';
-let firebaseConfig={...JSON.parse(localStorage.getItem(cfgKey)||'{}')};
+const DEFAULT_FIREBASE_CONFIG={apiKey:'AIzaSyBi2-gI4R2hfEXEY2pyZr67jhpdVXEOt4k',authDomain:'tupp-homework-ai.firebaseapp.com',projectId:'tupp-homework-ai',storageBucket:'tupp-homework-ai.firebasestorage.app',messagingSenderId:'472435152177',appId:'1:472435152177:web:fc7cb9678163e5c9b74c10',measurementId:'G-51XL8R5BRQ'};
+let firebaseConfig=(()=>{let s={};try{s=JSON.parse(localStorage.getItem(cfgKey)||'{}')}catch{}Object.keys(s).forEach(k=>{if(!s[k])delete s[k]});return {...DEFAULT_FIREBASE_CONFIG,...s}})();
 function saveCfg(){localStorage.setItem(cfgKey,JSON.stringify(firebaseConfig));}
 function firebaseConfigured(){return Boolean(firebaseConfig.apiKey&&firebaseConfig.authDomain&&firebaseConfig.projectId&&firebaseConfig.appId)}
 async function initFirebase(){
