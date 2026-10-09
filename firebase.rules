@@ -1,0 +1,27 @@
+// Starter rules only. Review and harden before production.
+// Principle: deny-by-default, then allow based on authenticated role claims / member docs.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function own(uid) { return signedIn() && request.auth.uid == uid; }
+    function member() { return signedIn() && exists(/databases/$(database)/documents/councilMembers/$(request.auth.uid)); }
+    function activeMember() { return member() && get(/databases/$(database)/documents/councilMembers/$(request.auth.uid)).data.active == true; }
+    function hasRole(r) { return activeMember() && r in get(/databases/$(database)/documents/councilMembers/$(request.auth.uid)).data.roles; }
+
+    match /profiles/{uid} {
+      allow read, write: if own(uid) || hasRole('CAO') || hasRole('DCAO') || hasRole('SCAO') || hasRole('HSA');
+    }
+    match /homework/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if signedIn() && (resource.data.createdBy == request.auth.uid || hasRole('CAO') || hasRole('DCAO') || hasRole('SCAO') || hasRole('HSA'));
+    }
+    match /councilMembers/{uid} {
+      allow read: if activeMember() && (request.auth.uid == uid || hasRole('CAO') || hasRole('DCAO') || hasRole('SCAO') || hasRole('HSA'));
+      allow write: if hasRole('CAO') || hasRole('DCAO') || hasRole('SCAO') || hasRole('HSA');
+    }
+    match /audit/{id} { allow create: if signedIn(); allow read: if activeMember(); allow update, delete: if hasRole('CAO'); }
+    match /system/{docId} { allow read: if signedIn(); allow write: if hasRole('CAO'); }
+  }
+}
