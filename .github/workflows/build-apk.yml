@@ -1,0 +1,53 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v2
+
+      - name: Install Cordova & Build APK
+        run: |
+          npm install -g cordova
+          cordova create tupp-app com.Gsrt07.app "Tupp Ai"
+          cd tupp-app
+          cordova platform add android
+          cp -r ../* www/ || true
+          cordova build android --release
+
+      - name: Package APK and Icon into ZIP
+        run: |
+          mkdir -p release-output
+          cp tupp-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk release-output/Tupp_Ai_com.Gsrt07.app.apk
+          if [ -f 8752.jpg ]; then cp 8752.jpg release-output/icon.jpg; fi
+          cd release-output
+          zip -r ../Tupp_Ai_v1.0.zip ./*
+
+      - name: Commit ZIP to GitHub Repository
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add Tupp_Ai_v1.0.zip
+          git commit -m "build: automated Tupp Ai APK zip package [com.Gsrt07.app]" || exit 0
+          git push origin main
