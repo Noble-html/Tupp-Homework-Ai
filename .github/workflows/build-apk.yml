@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -51,3 +53,15 @@ jobs:
           git add Tupp_Ai_v1.0.zip
           git commit -m "build: automated Tupp Ai APK zip package [com.Gsrt07.app]" || exit 0
           git push origin main
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0.0
+          files: release-output/Tupp_Ai_com.Gsrt07.app.apk
+          name: Tupp Ai v1.0.0 Release
+          body: Automated build for Tupp Ai (com.Gsrt07.app) with live Firebase Homework Tracking, Send/Submit button, global persistence, and Gemini AI integration.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
