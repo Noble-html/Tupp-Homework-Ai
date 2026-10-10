@@ -26,14 +26,17 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-        with:
-          api-level: android-33
-          build-tools: 33.0.2
-
-      - name: Install Cordova and Build
+      - name: Install Cordova and Build Android App
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
+          echo "Using ANDROID_HOME: $ANDROID_HOME"
+          export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+
+          # Accept licenses if any
+          yes | sdkmanager --licenses || true
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" || true
+
           npm install -g cordova
           cordova create myapp com.Gsrt07.app "Tupp Ai"
           cd myapp
