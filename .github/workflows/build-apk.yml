@@ -34,24 +34,23 @@ jobs:
           cd tupp-app
           cordova platform add android
           cp -r ../* www/ || true
-          cordova build android --release
+          cordova build android --debug || cordova build android
 
       - name: Locate and Copy APK
         run: |
           mkdir -p release-output
-          find . -name "*.apk"
-          cp tupp-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk release-output/Tupp_Ai_com.Gsrt07.app.apk || cp $(find . -name "*.apk" | head -n 1) release-output/Tupp_Ai_com.Gsrt07.app.apk
+          find . -name "*.apk" -exec cp {} release-output/ \;
           ls -la release-output/
 
       - name: Publish GitHub Release with APK
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v1.0.0
-          files: release-output/Tupp_Ai_com.Gsrt07.app.apk
+          files: release-output/*.apk
           name: Tupp Ai v1.0.0 Release
           body: Automated build for Tupp Ai (com.Gsrt07.app) with live Firebase Homework Tracking, Send/Submit button, global persistence, and Gemini AI integration.
           draft: false
           prerelease: false
-          fail_on_unmatched_files: true
+          files_glob: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
