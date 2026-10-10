@@ -1,8 +1,10 @@
 const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first assistant for students, teachers, and school staff. Answer broad educational and general knowledge questions accurately and clearly. For current or uncertain facts, state uncertainty and recommend verification. Never claim to be an official school or government authority. For homework, teach step-by-step and encourage understanding. Keep student privacy in mind and do not reveal private student records.`;
 
-const FALLBACK_MODELS = [
+const ALLOWED_MODELS = [
   'gemini-1.5-flash',
-  'gemini-2.5-flash'
+  'gemini-3.1-pro-preview',
+  'gemini-2.5-flash',
+  'gemini-1.5-pro'
 ];
 
 export default async function handler(req, res) {
@@ -48,10 +50,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing prompt or contents in request body' });
     }
 
-    const requestedModel = process.env.GEMINI_MODEL;
-    const modelsToTry = requestedModel 
-      ? [requestedModel, ...FALLBACK_MODELS.filter(m => m !== requestedModel)]
-      : FALLBACK_MODELS;
+    // Filter out deprecated models like gemini-2.5-pro if passed via env
+    const envModel = process.env.GEMINI_MODEL;
+    let modelsToTry = ALLOWED_MODELS;
+    if (envModel && !envModel.includes('2.5-pro')) {
+      modelsToTry = [envModel, ...ALLOWED_MODELS.filter(m => m !== envModel)];
+    }
 
     let lastError = null;
 
