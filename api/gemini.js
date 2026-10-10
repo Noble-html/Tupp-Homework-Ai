@@ -2,8 +2,6 @@ const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first assistant 
 
 const FALLBACK_MODELS = [
   'gemini-1.5-flash',
-  'gemini-1.5-pro',
-  'gemini-3.1-pro-preview',
   'gemini-2.5-flash'
 ];
 
