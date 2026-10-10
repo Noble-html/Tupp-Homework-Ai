@@ -26,14 +26,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install Cordova and Build Android App
+      - name: Install Cordova and Build Android App with Custom Icon
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           echo "Using ANDROID_HOME: $ANDROID_HOME"
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
 
-          # Accept licenses if any
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2" || true
 
@@ -41,7 +40,26 @@ jobs:
           cordova create myapp com.Gsrt07.app "Tupp Ai"
           cd myapp
           cordova platform add android
+
+          # Copy web files into www/
+          rm -rf www/*
           cp -r ../* www/ || true
+          # Remove .github and myapp from www if copied
+          rm -rf www/.github www/myapp www/release-output || true
+
+          # Set up custom icon across Android mipmap directories if icon exists
+          if [ -f ../IMG_20261009_210941_373.jpg ]; then
+            echo "Applying custom app icon..."
+            ICON_SRC="../IMG_20261009_210941_373.jpg"
+            RES_DIR="platforms/android/app/src/main/res"
+            for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+              mkdir -p "$RES_DIR/mipmap-$d"
+              cp "$ICON_SRC" "$RES_DIR/mipmap-$d/ic_launcher.png"
+              cp "$ICON_SRC" "$RES_DIR/mipmap-$d/ic_launcher_round.png"
+              cp "$ICON_SRC" "$RES_DIR/mipmap-$d/ic_launcher_foreground.png"
+            done
+          fi
+
           cordova build android --debug
 
       - name: Locate and Copy APK
@@ -56,7 +74,7 @@ jobs:
           tag_name: v1.0.0
           files: release-output/*.apk
           name: Tupp Ai v1.0.0 Release
-          body: Automated build for Tupp Ai (com.Gsrt07.app) with live Firebase Homework Tracking, Send/Submit button, global persistence, and Gemini AI integration.
+          body: Automated build for Tupp Ai (com.Gsrt07.app) with custom app icon, live Firebase Homework Tracking, Send/Submit button, global persistence, and Gemini AI integration.
           draft: false
           prerelease: false
           files_glob: true
