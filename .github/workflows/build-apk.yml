@@ -28,6 +28,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
+        with:
+          api-level: android-33
+          build-tools: 33.0.2
 
       - name: Install Cordova and Build
         run: |
@@ -35,12 +38,7 @@ jobs:
           cordova create myapp com.Gsrt07.app "Tupp Ai"
           cd myapp
           cordova platform add android
-          # Copy all root files into www/ (including index.html, api/, etc.)
           cp -r ../* www/ || true
-          # Fix icon reference if needed or copy the jpg as icon
-          if [ -f ../IMG_20261009_210941_373.jpg ]; then
-            cp ../IMG_20261009_210941_373.jpg www/icon.jpg
-          fi
           cordova build android --debug
 
       - name: Locate and Copy APK
