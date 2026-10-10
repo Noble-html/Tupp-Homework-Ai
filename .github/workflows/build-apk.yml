@@ -40,21 +40,18 @@ jobs:
         run: |
           mkdir -p release-output
           find . -name "*.apk"
-          APK_PATH=$(find . -name "app-release-unsigned.apk" -o -name "*.apk" | head -n 1)
-          if [ -n "$APK_PATH" ]; then
-            cp "$APK_PATH" release-output/Tupp_Ai_com.Gsrt07.app.apk
-          fi
-          ls -la release-output
+          cp tupp-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk release-output/Tupp_Ai_com.Gsrt07.app.apk || cp $(find . -name "*.apk" | head -n 1) release-output/Tupp_Ai_com.Gsrt07.app.apk
+          ls -la release-output/
 
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release with APK
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v1.0.0
-          files: |
-            release-output/Tupp_Ai_com.Gsrt07.app.apk
+          files: release-output/Tupp_Ai_com.Gsrt07.app.apk
           name: Tupp Ai v1.0.0 Release
           body: Automated build for Tupp Ai (com.Gsrt07.app) with live Firebase Homework Tracking, Send/Submit button, global persistence, and Gemini AI integration.
           draft: false
           prerelease: false
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
