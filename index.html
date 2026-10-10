@@ -1,6 +1,33 @@
-import json, base64
-
-file_data = json.load(open("/mnt/files/mex/hang.json"))
-content_b64 = file_data['results'][0]['response']['data']['content']['content']
-raw_content = base64.b64decode(content_b64).decode('utf-8')
-print("Content length:", len(raw_content))
+<!doctype html>
+<html lang="th">
+<head>
+    <meta name="google-site-verification" content="XjRMQUqm1SkKxqEvP51VXruUkApLbtq_BHQGEwOS614" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TUPP Homework AI</title>
+<meta name="description" content="ระบบการบ้านและช่วยเหลือการเรียน โรงเรียนท่าวังผาพิทยาคม"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body{font-family:'Prompt',sans-serif;}
+</style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+<div id="root"></div>
+<script>
+const defaultFirebaseConfig = {
+  apiKey: "AIzaSyBi2-gI4R2hfEXEY2pyZr67jhpdVXEOt4k",
+  authDomain: "tupp-homework-ai.firebaseapp.com",
+  projectId: "tupp-homework-ai",
+  storageBucket: "tupp-homework-ai.firebasestorage.app",
+  messagingSenderId: "472435152177",
+  appId: "1:472435152177:web:fc7cb9678163e5c9b74c10",
+  measurementId: "G-51XL8R5BRQ"
+};
+console.log("TUPP AI Loaded");
+</script>
+</body>
+</html>
