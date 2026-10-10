@@ -34,30 +34,24 @@ jobs:
           cd tupp-app
           cordova platform add android
           cp -r ../* www/ || true
-          cordova build android --release || cordova build android
+          cordova build android --release
 
-      - name: Package APK and Icon into ZIP
+      - name: Locate and Copy APK
         run: |
           mkdir -p release-output
           find . -name "*.apk"
-          cp $(find . -name "app-release-unsigned.apk" -o -name "*.apk" | head -n 1) release-output/Tupp_Ai_com.Gsrt07.app.apk || true
-          if [ -f 8752.jpg ]; then cp 8752.jpg release-output/icon.jpg; fi
-          cd release-output
-          zip -r ../Tupp_Ai_v1.0.zip ./* || true
-
-      - name: Commit ZIP to GitHub Repository
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add Tupp_Ai_v1.0.zip || true
-          git commit -m "build: automated Tupp Ai APK zip package [com.Gsrt07.app]" || exit 0
-          git push origin main
+          APK_PATH=$(find . -name "app-release-unsigned.apk" -o -name "*.apk" | head -n 1)
+          if [ -n "$APK_PATH" ]; then
+            cp "$APK_PATH" release-output/Tupp_Ai_com.Gsrt07.app.apk
+          fi
+          ls -la release-output
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v1.0.0
-          files: release-output/Tupp_Ai_com.Gsrt07.app.apk
+          files: |
+            release-output/Tupp_Ai_com.Gsrt07.app.apk
           name: Tupp Ai v1.0.0 Release
           body: Automated build for Tupp Ai (com.Gsrt07.app) with live Firebase Homework Tracking, Send/Submit button, global persistence, and Gemini AI integration.
           draft: false
