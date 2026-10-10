@@ -2,8 +2,7 @@ const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first assistant 
 
 const ALLOWED_MODELS = [
   'gemini-2.5-flash',
-  'gemini-1.5-flash',
-  'gemini-3.1-pro-preview'
+  'gemini-1.5-flash'
 ];
 
 export default async function handler(req, res) {
