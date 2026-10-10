@@ -1,1 +1,6 @@
-PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9InRoIj4KPGhlYWQ+CiAgICA8\nbWV0YSBuYW1lPSJnb29nbGUtc2l0ZS12ZXJpZmljYXRpb24iIGNvbnRlbnQ9\nIlhqUk1RVXFtMVNrS3hxRXZQNTFWWHJ1VWtBcExidHFfQkhRR0V3T1M2MTQi\nIC8+CjxtZXRhIGNoYXJzZXQ9IlVURi04IiAvPgogICAgPG1ldGEgbmFtZT0i\ndmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCwgaW5pdGlh\nbC1zY2FsZT0xLjAiIC8+CiAgICA8dGl0bGU+VFVQUCBIb21ld29yayBBSTwv\ndGl0bGU+CiAgICA8bWV0YSBuાઈ name=\"description\" content=\"ระบบการบ้านและช่วยเหลือการเรียน โรงเรียนท่าวังผาพิทยาคม\" />\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n    <link href=\"https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap\" rel=\"stylesheet\">\n    <script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4\"></script>\n    <link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css\">\n    <style>\n...
+import json, base64
+
+file_data = json.load(open("/mnt/files/mex/hang.json"))
+content_b64 = file_data['results'][0]['response']['data']['content']['content']
+raw_content = base64.b64decode(content_b64).decode('utf-8')
+print("Content length:", len(raw_content))
