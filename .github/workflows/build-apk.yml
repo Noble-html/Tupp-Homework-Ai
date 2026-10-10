@@ -26,23 +26,16 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install Cordova and Android SDK
-        uses: android-actions/setup-android@v2
+      - name: Build APK with Cordova
+        uses: imoncore/cordova-action@v1
+        with:
+          platform: android
+          release: false
 
-      - name: Build Cordova Android App
-        run: |
-          npm install -g cordova
-          sdkmanager "platforms;android-33" "build-tools;33.0.2"
-          cordova create tupp-app com.Gsrt07.app "Tupp Ai"
-          cd tupp-app
-          cordova platform add android
-          cp -r ../* www/ || true
-          cordova build android --debug
-
-      - name: Copy APK
+      - name: Locate and Copy APK
         run: |
           mkdir -p release-output
-          cp tupp-app/platforms/android/app/build/outputs/apk/debug/app-debug.apk release-output/Tupp_Ai_Debug.apk || find . -name "*.apk" -exec cp {} release-output/ \;
+          find . -name "*.apk" -exec cp {} release-output/ \;
           ls -la release-output/
 
       - name: Publish GitHub Release with APK
