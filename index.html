@@ -71,7 +71,71 @@ const app={page:'school',session:null,member:null,authMode:'general',authOpen:fa
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function setStatus(s){app.status=s;render()}
 function nav(k){app.page=k;window.scrollTo({top:0,behavior:'smooth'});render()}
-function school(){return `<section class="page"><div class="hero"><div><span class="eyebrow">TUPP • SCHOOL PLATFORM</span><h1>เว็บไซต์โรงเรียน</h1><p>พื้นที่รวมข่าวสาร ประกาศ กิจกรรม และบริการสำหรับนักเรียนและครู โดยแยกจากระบบติดตามงานเพื่อให้หน้าเว็บโหลดเร็ว</p><div class="hero-actions"><a href="https://www.tupp.ac.th/" target="_blank" rel="noreferrer">เปิดเว็บไซต์ TUPP ↗</a><button data-go="tracking">ไปติดตามงาน →</button></div></div><div class="hero-mark"><div class="logo"><canvas data-electric></canvas></div></div></div><div class="cards"><article class="card"><span class="card-kicker">TUPP</span><h3>ประกาศและข่าว</h3><p>รวมลิงก์ข้อมูลจากต้นทางโรงเรียน โดยไม่บล็อกการใช้งานของระบบติดตามงาน</p></article><article class="card"><span class="card-kicker">TUPP</span><h3>บริการนักเรียน</h3><p>เข้าสู่พื้นที่งานของตัวเองจากเมนูด้านบน โดยข้อมูลส่วนตัวแยกจากหน้าเว็บสาธารณะ</p></article><article class="card"><span class="card-kicker">TUPP</span><h3>โครงการ AI</h3><p>TUPP Homework AI เป็นโครงการต้นแบบสำหรับช่วยการเรียน โดยควบคุมโครงการตามขอบเขตที่กำหนด</p></article></div></section>`}
+function school(){return `<section class="page">
+  <div class="hero">
+    <div>
+      <span class="eyebrow">TUPP • SCHOOL PLATFORM</span>
+      <h1>เว็บไซต์โรงเรียน</h1>
+      <p>พื้นที่รวมข่าวสาร ประกาศ กิจกรรม และบริการสำหรับนักเรียนและครู โดยแยกจากระบบติดตามงานเพื่อให้หน้าเว็บโหลดเร็ว</p>
+      <div class="hero-actions">
+        <a href="https://www.tupp.ac.th/" target="_blank" rel="noreferrer">เปิดเว็บไซต์ TUPP ↗</a>
+        <button data-go="tracking">ไปติดตามงาน →</button>
+      </div>
+    </div>
+    <div class="hero-mark">
+      <div class="logo"><canvas data-electric></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-head" style="margin-top:2.5rem;margin-bottom:1rem;">
+    <div>
+      <span class="eyebrow">OFFICIAL COUNCILS & ORGANIZATIONS</span>
+      <h2>ตราสัญลักษณ์และหน่วยงานอย่างเป็นทางการ</h2>
+      <p>ทำเนียบองค์กร สภา และพรรคที่ร่วมขับเคลื่อนประชาธิปไตยและนวัตกรรมในโรงเรียนเตรียมอุดมศึกษาพัฒนาการ สุวรรณภูมิ</p>
+    </div>
+  </div>
+
+  <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+    <article class="card" style="border-top: 4px solid #ff4b91; background: linear-gradient(135deg, rgba(255,75,145,0.05), transparent);">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="width:50px; height:50px; border-radius:50%; background:radial-gradient(circle, #ff4b91 0%, #3b82f6 100%); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.2rem; box-shadow:0 4px 12px rgba(255,75,145,0.3);">🥟</div>
+        <div>
+          <span class="card-kicker" style="color:#ff4b91;">PARTY</span>
+          <h3 style="margin:0; font-size:1.1rem;">พรรคเกี๊ยวเกี่ยวข้องกับปลาสองตัว</h3>
+        </div>
+      </div>
+      <p style="font-size:0.9rem; color:var(--muted); line-height:1.5;"><b>Fair • Lead • Care</b><br><i>"ทัพพีเอาไว้ทำกับข้าว ส่วน TUPP ของเราเอาไว้สร้างคนดี คนเริ่ด"</i><br>โรงเรียนเตรียมอุดมศึกษาพัฒนาการ สุวรรณภูมิ</p>
+    </article>
+
+    <article class="card" style="border-top: 4px solid #3b82f6; background: linear-gradient(135deg, rgba(59,130,246,0.05), transparent);">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, #1e3a8a, #3b82f6); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.2rem; box-shadow:0 4px 12px rgba(59,130,246,0.3);">🤖</div>
+        <div>
+          <span class="card-kicker" style="color:#3b82f6;">RESEARCH & AI</span>
+          <h3 style="margin:0; font-size:1.1rem;">Gifted Science Research & AI</h3>
+        </div>
+      </div>
+      <p style="font-size:0.9rem; color:var(--muted); line-height:1.5;"><b>GS&RT & AI @ TUPP</b><br>โครงการห้องเรียนพิเศษวิทยาศาสตร์ คณิตศาสตร์ และเทคโนโลยี (Artificial Intelligence & Research) เตรียมอุดมศึกษาพัฒนาการ สุวรรณภูมิ</p>
+    </article>
+
+    <article class="card" style="border-top: 4px solid #f59e0b; background: linear-gradient(135deg, rgba(245,158,11,0.05), transparent);">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+        <div style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, #1e3a8a, #f59e0b); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:1.2rem; box-shadow:0 4px 12px rgba(245,158,11,0.3);">🏛️</div>
+        <div>
+          <span class="card-kicker" style="color:#f59e0b;">COUNCIL</span>
+          <h3 style="margin:0; font-size:1.1rem;">สภาการกำกับ การวิจัย และ AI</h3>
+        </div>
+      </div>
+      <p style="font-size:0.9rem; color:var(--muted); line-height:1.5;"><b>TUPP CRT-AI</b><br>สภาการกำกับ การวิจัย เทคโนโลยี และปัญญาประดิษฐ์ แห่งโรงเรียนเตรียมอุดมศึกษาพัฒนาการ สุวรรณภูมิ</p>
+    </article>
+  </div>
+
+  <div class="cards" style="margin-top: 1.5rem;">
+    <article class="card"><span class="card-kicker">TUPP</span><h3>ประกาศและข่าว</h3><p>รวมลิงก์ข้อมูลจากต้นทางโรงเรียน โดยไม่บล็อกการใช้งานของระบบติดตามงาน</p></article>
+    <article class="card"><span class="card-kicker">TUPP</span><h3>บริการนักเรียน</h3><p>เข้าสู่พื้นที่งานของตัวเองจากเมนูด้านบน โดยข้อมูลส่วนตัวแยกจากหน้าเว็บสาธารณะ</p></article>
+    <article class="card"><span class="card-kicker">TUPP</span><h3>โครงการ AI</h3><p>TUPP Homework AI เป็นโครงการต้นแบบสำหรับช่วยการเรียน โดยควบคุมโครงการตามขอบเขตที่กำหนด</p></article>
+  </div>
+</section>`}
 function tracking(){const now=Date.now();const pending=(app.tasks||[]).filter(x=>x.status==='PENDING');return `<section class="page"><div class="section-head"><div><span class="eyebrow">HOMEWORK TRACKING</span><h2>ติดตามงาน</h2><p>หน้าเดียวสำหรับบันทึกงาน ดู Deadline และแยกสถานะส่งแล้ว / ยังไม่ส่ง / เลยกำหนด</p></div><div class="tracking-badge">${pending.length} งานค้าง</div></div><div class="tracking-grid"><form class="panel" id="taskForm"><h3>บันทึกการบ้าน</h3><label>รหัสนักเรียน 5 หลัก<input id="studentId" inputmode="numeric" maxlength="5" value="${esc(app.studentId)}" placeholder="5-digit ID"/></label><label>ชื่องาน<input id="title" required value="${esc(app.form.title)}"/></label><label>วิชา<input id="subject" value="${esc(app.form.subject)}"/></label><label>กำหนดส่ง<input id="dueAt" type="datetime-local" value="${esc(app.form.dueAt)}"/></label><div class="two"><label>ความสำคัญ<select id="priority"><option ${app.form.priority==='NORMAL'?'selected':''}>NORMAL</option><option ${app.form.priority==='HIGH'?'selected':''}>HIGH</option><option ${app.form.priority==='URGENT'?'selected':''}>URGENT</option></select></label><label>คะแนนเต็ม<input id="scoreMax" type="number" min="0" value="${esc(app.form.scoreMax)}"/></label></div><label>หมายเหตุ<textarea id="note">${esc(app.form.note)}</textarea></label><button class="primary">บันทึกงานลง Firebase</button><div class="form-msg">${esc(app.status)}</div></form><div class="panel"><div class="panel-head"><div><h3>สถานะงาน</h3><span class="muted">ข้อมูลล่าสุดจาก Firestore</span></div><button class="ghost" id="refreshTasks">รีเฟรช</button></div><div class="stat-row"><div class="stat"><b>${(app.tasks||[]).length}</b><span>ทั้งหมด</span></div><div class="stat"><b>${(app.tasks||[]).filter(x=>x.status==='SUBMITTED').length}</b><span>ส่งแล้ว</span></div><div class="stat"><b>${pending.length}</b><span>ยังไม่ส่ง</span></div><div class="stat red"><b>${pending.filter(x=>x.dueAt&&new Date(x.dueAt).getTime()<now).length}</b><span>เลยกำหนด</span></div></div><div class="task-list">${(app.tasks||[]).map(t=>{const overdue=t.status==='PENDING'&&t.dueAt&&new Date(t.dueAt).getTime()<now;return `<div class="task ${overdue?'overdue':''}"><div><b>${esc(t.title)}</b><span>${esc(t.subject||'ไม่ระบุวิชา')} • ${esc(t.priority||'NORMAL')}</span></div><div class="task-right"><span>${t.status==='SUBMITTED'?'ส่งแล้ว':'ยังไม่ส่ง'}</span><small>${esc(t.dueAt||'ไม่ระบุ Deadline')}</small>${t.status==='PENDING'?`<button class="primary" data-submit-id="${t.id}" style="padding:4px 10px;font-size:11px;margin-top:6px">ส่งงาน</button>`:''}</div></div>`}).join('')||'<div class="empty">ยังไม่มีรายการงานสำหรับรหัสนี้</div>'}</div></div></div></section>`}
 function ai(){
   const pending=(app.tasks||[]).filter(x=>x.status==='PENDING');
