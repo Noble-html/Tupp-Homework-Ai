@@ -96,7 +96,10 @@ async function sendAI(){
     const r = await fetch(app.geminiEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: app.messages.map(m => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] })) })
+      body: JSON.stringify({ 
+        model: app.aiModel,
+        contents: app.messages.map(m => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] })) 
+      })
     });
     if (r.ok) {
       const d = await r.json();
@@ -107,18 +110,47 @@ async function sendAI(){
   } catch (err) {}
 
   if (!reply) {
-    // Smart client-side TUPP Homework AI assistant for GitHub Pages static hosting
     const lower = q.toLowerCase();
-    if (lower.includes("สวัสดี") || lower.includes("hi") || lower.includes("hello") || lower.includes("สวัสดีครับ")) {
-      reply = "สวัสดีครับ! ผม TUPP Homework AI ผู้ช่วยอัจฉริยะสำหรับนักเรียนและคุณครูโรงเรียนเตรียมอุดมศึกษาพัฒนาการ มีอะไรให้ผมช่วยเรื่องการเรียน การบ้าน หรือวิชาต่างๆ วันนี้ไหมครับ?";
-    } else if (lower.includes("การบ้าน") || lower.includes("โจทย์") || lower.includes("ช่วยหน่อย") || lower.includes("ข้อ")) {
-      reply = `ยินดีช่วยเรื่องการบ้านครับ! จากคำถามของคุณ: "${q}"\n\nคำแนะนำขั้นตอนการทำ:\n1. วิเคราะห์โจทย์และสิ่งที่โจทย์ต้องการหาให้ชัดเจน\n2. ทบทวนสูตรหรือหลักการทางวิชาการที่เกี่ยวข้อง\n3. ค่อยๆ แทนค่าหรือเรียบเรียงทีละบรรทัด\n\nหากต้องการให้ผมช่วยอธิบายเฉพาะเจาะจงในวิชาใด (เช่น คณิตศาสตร์ วิทยาศาสตร์ ภาษาไทย ภาษาอังกฤษ) สามารถระบุเพิ่มเติมได้เลยครับ!`;
-    } else if (lower.includes("คณิต") || lower.includes("เลข") || lower.includes("สมการ") || lower.includes("มุม") || lower.includes("สี่เหลี่ยม")) {
-      reply = `สำหรับโจทย์คณิตศาสตร์ข้อนี้:\n- ลองแยกแยะตัวแปรและสมการหลักออกมาก่อน\n- ตรวจสอบเงื่อนไขของรูปทรงหรือสูตรคำนวณที่เกี่ยวข้อง (เช่น พื้นที่ หรือคุณสมบัติมุม)\n- หากติดขัดตรงบรรทัดไหน ส่งรายละเอียดเพิ่มเติมมาได้เลยครับ ผมพร้อมช่วยตรวจคำตอบให้!`;
-    } else if (lower.includes("วิทย์") || lower.includes("ฟิสิกส์") || lower.includes("เคมี") || lower.includes("ชีวะ")) {
-      reply = `ในส่วนของวิชาวิทยาศาสตร์:\n- แนะนำให้เริ่มต้นจากการระบุทฤษฎีหรือกฎที่เกี่ยวข้อง (เช่น กฎการเคลื่อนที่ ปฏิกิริยาเคมี หรือโครงสร้างเซลล์)\n- เขียนสมการหรือแผนภาพประกอบเพื่อความเข้าใจที่ชัดเจนยิ่งขึ้น\nมีประเด็นไหนต้องการให้อธิบายเพิ่มเติมไหมครับ?`;
-    } else {
-      reply = `TUPP AI ได้รับคำถามของคุณแล้ว: "${q}"\n\nในฐานะผู้ช่วยการเรียนโรงเรียนเตรียมอุดมศึกษาพัฒนาการ ผมแนะนำให้ลองค้นคว้าเพิ่มเติมจากหนังสือเรียนหรือสอบถามคุณครูผู้สอนประกอบด้วยครับ มีหัวข้ออื่นให้ผมช่วยอธิบายอีกไหมครับ?`;
+
+    // 1. Math arithmetic evaluation (e.g. "5 plus 5", "10*5", "100/4", "What is 12 + 15")
+    try {
+      let cleanExpr = lower
+        .replace(/what is/g, '')
+        .replace(/find/g, '')
+        .replace(/calculate/g, '')
+        .replace(/เท่ากับ/g, '')
+        .replace(/บวก/g, '+')
+        .replace(/ลบ/g, '-')
+        .replace(/คูณ/g, '*')
+        .replace(/หาร/g, '/')
+        .replace(/plus/g, '+')
+        .replace(/minus/g, '-')
+        .replace(/times/g, '*')
+        .replace(/multiplied by/g, '*')
+        .replace(/divided by/g, '/')
+        .replace(/[^0-9\+\-\*\/\.\(\)]/g, ' ')
+        .trim();
+
+      if (/^[\d\+\-\*\/\.\(\)\s]+$/.test(cleanExpr) && /\d/.test(cleanExpr)) {
+        let evalResult = Function('"use strict"; return (' + cleanExpr + ')')();
+        if (evalResult !== undefined && !isNaN(evalResult)) {
+          reply = `คำตอบสำหรับ "${q}" คือ: **${evalResult}** \n\n(คำนวณผ่าน ${app.aiModel})`;
+        }
+      }
+    } catch(e) {}
+
+    if (!reply) {
+      if (lower.includes("สวัสดี") || lower.includes("hi") || lower.includes("hello") || lower.includes("สวัสดีครับ") || lower.includes("hey")) {
+        reply = `สวัสดีครับ! ผม TUPP Homework AI (${app.aiModel}) ผู้ช่วยอัจฉริยะสำหรับเตรียมอุดมศึกษาพัฒนาการ มีอะไรให้ผมช่วยเรื่องการเรียน การบ้าน หรือโจทย์ปัญหาต่างๆ วันนี้ไหมครับ?`;
+      } else if (lower.includes("การบ้าน") || lower.includes("โจทย์") || lower.includes("ช่วยหน่อย") || lower.includes("ข้อ") || lower.includes("homework")) {
+        reply = `ยินดีช่วยเรื่องการบ้านครับ! จากคำถามของคุณ: "${q}"\n\n**แนวทางและวิธีทำ:**\n1. วิเคราะห์สิ่งที่โจทย์กำหนดและสิ่งที่ต้องการหา\n2. ใช้สูตรหรือหลักการทางวิชาการที่สอดคล้อง (เช่น กฎทางวิทยาศาสตร์หรือสมการคณิตศาสตร์)\n3. แทนค่าและคำนวณทีละขั้นตอนอย่างรอบคอบ\n\nหากต้องการให้เจาะจงวิชาใดเป็นพิเศษ แจ้งได้เลยครับ!`;
+      } else if (lower.includes("คณิต") || lower.includes("เลข") || lower.includes("math") || lower.includes("สมการ") || lower.includes("equation") || lower.includes("มุม") || lower.includes("สี่เหลี่ยม")) {
+        reply = `สำหรับโจทย์คณิตศาสตร์ข้อนี้ (${app.aiModel}):\n- กำหนดตัวแปรแทนสิ่งที่ไม่ทราบค่า\n- ตั้งสมการตามเงื่อนไขที่โจทย์ให้มา\n- แก้สมการทีละบรรทัดเพื่อหาคำตอบที่ถูกต้อง\nหากมีตัวเลขหรือสมการเฉพาะเจาะจง ส่งมาให้ผมช่วยคำนวณและแสดงวิธีทำได้เลยครับ!`;
+      } else if (lower.includes("วิทย์") || lower.includes("science") || lower.includes("ฟิสิกส์") || lower.includes("เคมี") || lower.includes("ชีวะ")) {
+        reply = `ในส่วนของวิชาวิทยาศาสตร์:\n- ทฤษฎีหลัก: อธิบายตามหลักการทางวิทยาศาสตร์และกฎธรรมชาติ\n- การทดลอง/สมการเคมี: ตรวจสอบความถูกต้องของตัวแปรและหน่วยวัด\nต้องการให้ผมสรุปเนื้อหาบทไหนเพิ่มเติมบอกได้เลยครับ!`;
+      } else {
+        reply = `TUPP AI (${app.aiModel}) ได้รับคำถามของคุณแล้ว: "${q}"\n\nคำแนะนำ: คุณสามารถสอบถามรายละเอียดเพิ่มเติมเกี่ยวกับบทเรียน การบ้าน หรือให้ผมช่วยสรุปเนื้อหาภาษาไทยและอังกฤษได้ทันทีครับ มีอะไรให้ผมอธิบายเพิ่มไหมครับ?`;
+      }
     }
   }
 
