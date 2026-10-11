@@ -94,8 +94,8 @@ document.querySelectorAll('[data-submit-id]').forEach(b=>b.onclick=async()=>{con
 async function loadTasks(){try{app.tasks=await listHomework();render()}catch(e){app.status=e.message;render()}}
 async function sendAI(){
   if(app.busy)return;
-  const input=document.getElementById('aiInput');
-  let q=(input?.value||'').trim();
+  const aiUserInput=document.getElementById('aiInput');
+  let q=(aiUserInput?.value||'').trim();
   if(!q)return;
 
   // Auto-detect homework queries and attach user task list if relevant
@@ -108,11 +108,11 @@ async function sendAI(){
     q = q + "\n\n[ข้อมูลการบ้านปัจจุบันของนักเรียน]:\n" + taskSummary;
   }
   if(app.busy)return;
-  const input=document.getElementById('aiInput');
-  const q=(input?.value||'').trim();
+  const aiUserInput=document.getElementById('aiInput');
+  const q=(aiUserInput?.value||'').trim();
   if(!q)return;
   app.messages.push({role:'user',text:q});
-  if(input) input.value='';
+  if(input) aiUserInput.value='';
   app.busy=true;
   render();
   setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20);
