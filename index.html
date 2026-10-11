@@ -107,12 +107,9 @@ async function sendAI(){
       (app.tasks||[]).map(t => `- [${t.status}] ${t.title} (วิชา: ${t.subject || 'ไม่ระบุ'}, กำหนดส่ง: ${t.dueAt || 'ไม่ระบุ'}, ความสำคัญ: ${t.priority || 'NORMAL'})`).join('\n');
     q = q + "\n\n[ข้อมูลการบ้านปัจจุบันของนักเรียน]:\n" + taskSummary;
   }
-  if(app.busy)return;
-  const aiUserInput=document.getElementById('aiInput');
-  const q=(aiUserInput?.value||'').trim();
-  if(!q)return;
+
   app.messages.push({role:'user',text:q});
-  if(input) aiUserInput.value='';
+  if(aiUserInput) aiUserInput.value='';
   app.busy=true;
   render();
   setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20);
