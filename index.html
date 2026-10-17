@@ -271,30 +271,21 @@ async function sendAI(){
   if (!reply) {
     const lower = q.toLowerCase();
 
-    // 1. Math arithmetic evaluation
+    // 1. Math arithmetic evaluation (including Thai number words)
     try {
-      let cleanExpr = lower
-        .replace(/what is/g, '')
-        .replace(/find/g, '')
-        .replace(/calculate/g, '')
-        .replace(/หาค่า/g, '')
-        .replace(/เท่ากับ/g, '')
-        .replace(/บวก/g, '+')
-        .replace(/ลบ/g, '-')
-        .replace(/คูณ/g, '*')
-        .replace(/หาร/g, '/')
-        .replace(/plus/g, '+')
-        .replace(/minus/g, '-')
-        .replace(/times/g, '*')
-        .replace(/multiplied by/g, '*')
-        .replace(/divided by/g, '/')
+      let exprTrans = lower
+        .replace(/ศูนย์/g, '0').replace(/หนึ่ง/g, '1').replace(/สอง/g, '2').replace(/สาม/g, '3').replace(/สี่/g, '4')
+        .replace(/ห้า/g, '5').replace(/หก/g, '6').replace(/เจ็ด/g, '7').replace(/แปด/g, '8').replace(/เก้า/g, '9').replace(/สิบ/g, '10')
+        .replace(/what is/g, '').replace(/find/g, '').replace(/calculate/g, '').replace(/หาค่า/g, '').replace(/เท่ากับ/g, '').replace(/ได้/g, '')
+        .replace(/บวก/g, '+').replace(/ลบ/g, '-').replace(/คูณ/g, '*').replace(/หาร/g, '/')
+        .replace(/plus/g, '+').replace(/minus/g, '-').replace(/times/g, '*').replace(/multiplied by/g, '*').replace(/divided by/g, '/')
         .replace(/[^0-9\+\-\*\/\.\(\)]/g, ' ')
         .trim();
 
-      if (/^[\d\+\-\*\/\.\(\)\s]+$/.test(cleanExpr) && /\d/.test(cleanExpr)) {
-        let evalResult = Function('"use strict"; return (' + cleanExpr + ')')();
+      if (/^[\d\+\-\*\/\.\(\)\s]+$/.test(exprTrans) && /\d/.test(exprTrans)) {
+        let evalResult = Function('"use strict"; return (' + exprTrans + ')')();
         if (evalResult !== undefined && !isNaN(evalResult)) {
-          reply = `คำตอบสำหรับ "${q}" คือ: **${evalResult}**\n\n*(คำนวณโดย ${app.aiModel})*`;
+          reply = `${evalResult}`;
         }
       }
     } catch(e) {}
