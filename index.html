@@ -83,7 +83,27 @@ async function listHomework(){
   return Array.from(map.values());
 }
 async function updateTaskStatus(taskId, status){await initFirebase();return retry(()=>updateDoc(doc(state.db,'homework',taskId),{status,updatedAt:serverTimestamp()}))}
+async function notifyDiscord(data) {
+  const webhooks = [
+    "https://discord.com/api/webhooks/1560956010154303541/TkHsI7ybOygVqpZ_b08mLCFcSvNuokm6GL5aJNOLBPRKVFeQmwZl81f4pdv__xAzANUW",
+    "https://discord.com/api/webhooks/1560956064969658431/tynHTYiP0IMpaIVrPXQ4rbh8cZdwJdllXFJw9RCoRsTlkFpr0hK4tqpQSfaKSk4Sc0OG"
+  ];
+  const payload = {
+    content: `📚 **มีการบ้านใหม่ใน TUPP AI!**\n> **หัวข้อ/วิชา:** ${data.title || data.subject || 'ไม่ระบุ'}\n> **รายละเอียด:** ${data.description || '-'}\n> **กำหนดส่ง:** ${data.dueAt || '-'}`
+  };
+  for (const url of webhooks) {
+    try {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(err => console.error('Discord webhook error:', err));
+    } catch(e) {}
+  }
+}
+
 async function addHomework(data){
+  notifyDiscord(data);
   const localTask = { id: 'local_' + Date.now(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   try {
     const existingLocal = JSON.parse(localStorage.getItem('tupp_local_homework') || '[]');
