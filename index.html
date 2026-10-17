@@ -234,44 +234,32 @@ async function sendAI(){
   let q=(aiUserInput?.value||'').trim();
   if(!q)return;
 
-  const lowerQ = q.toLowerCase();
-  let cleanQ = q;
-  if (lowerQ.includes("การบ้าน") || lowerQ.includes("งาน") || lowerQ.includes("homework") || lowerQ.includes("task") || lowerQ.includes("ค้าง") || lowerQ.includes("ส่งอะไร") || lowerQ.includes("what homework")) {
-    const pending = (app.tasks||[]).filter(x => x.status === 'PENDING');
-    const taskSummary = (app.tasks||[]).length === 0 ? "ยังไม่มีการบ้านในระบบ" : 
-      `รายการการบ้านทั้งหมด (${(app.tasks||[]).length} งาน, ค้าง ${pending.length} งาน):\n` +
-      (app.tasks||[]).map(t => `- [${t.status}] ${t.title} (วิชา: ${t.subject || 'ไม่ระบุ'}, กำหนดส่ง: ${t.dueAt || 'ไม่ระบุ'})`).join('\n');
-    cleanQ = q + "\n\n[ข้อมูลการบ้านปัจจุบันของนักเรียน]:\n" + taskSummary;
-  }
-
   app.messages.push({role:'user',text:q});
   if(aiUserInput) aiUserInput.value='';
   app.busy=true;
   render();
   setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20);
 
+  // Simulate slight natural typing delay
+  await new Promise(r => setTimeout(r, 400));
+
+  const lower = q.toLowerCase().trim();
   let reply = "";
-  try {
-    const r = await fetch(app.geminiEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        model: app.aiModel,
-        contents: (app.messages||[]).map(m => ({ role: m.role === 'model' ? 'model' : 'user', parts: [{ text: m.text }] })) 
-      })
-    });
-    if (r.ok) {
-      const d = await r.json();
-      if (d && d.text) {
-        reply = d.text;
-      }
+
+  // 1. Homework queries
+  if (lower.includes("การบ้าน") || lower.includes("งาน") || lower.includes("homework") || lower.includes("task") || lower.includes("ค้าง") || lower.includes("ส่งอะไร")) {
+    const pending = (app.tasks||[]).filter(x => x.status === 'PENDING');
+    if ((app.tasks||[]).length === 0) {
+      reply = "ตอนนี้ยังไม่มีการบ้านบันทึกไว้ในระบบเลยครับ สบายใจได้เลย! ถ้ามีงานเพิ่ม บอกผมให้ช่วยบันทึกได้เสมอนะ";
+    } else {
+      reply = `นี่คือรายการการบ้านทั้งหมดครับ (${(app.tasks||[]).length} งาน, ค้างอยู่ ${pending.length} งาน):\n` +
+        (app.tasks||[]).map(t => `- [${t.status}] ${t.title} (วิชา: ${t.subject || 'ไม่ระบุ'}, กำหนดส่ง: ${t.dueAt || 'ไม่ระบุ'})`).join('\n') +
+        "\n\nมีวิชาไหนอยากให้ผมช่วยทำหรือสรุปเนื้อหาให้ไหมครับ?";
     }
-  } catch (err) {}
+  }
 
+  // 2. Math evaluation (including Thai number words)
   if (!reply) {
-    const lower = q.toLowerCase().trim();
-
-    // Robust Math Evaluation
     try {
       let mathStr = lower
         .replace(/ศูนย์/g, '0').replace(/หนึ่ง/g, '1').replace(/สอง/g, '2').replace(/สาม/g, '3').replace(/สี่/g, '4')
@@ -285,23 +273,27 @@ async function sendAI(){
       if (mathStr && /\d/.test(mathStr)) {
         let val = Function('"use strict"; return (' + mathStr + ')')();
         if (val !== undefined && !isNaN(val)) {
-          reply = String(val);
+          reply = `${val} ครับ`;
         }
       }
     } catch(e) {}
+  }
 
-    if (!reply) {
-      if (lower.includes("สวัสดี") || lower.includes("hi") || lower.includes("hello") || lower.includes("hey")) {
-        reply = "สวัสดีครับ! มีอะไรให้ผมช่วยวันนี้ไหมครับ ถามเรื่องการบ้าน วิชาเรียน หรือพูดคุยทั่วไปได้เลยนะ";
-      } else if (lower.includes("noun") || lower.includes("คำนาม")) {
-        reply = "Noun (คำนาม) คือ คำที่ใช้เรียกชื่อคน สัตว์ สิ่งของ หรือสถานที่ครับ เช่น cat (แมว), school (โรงเรียน), หรือความสุข (happiness)";
-      } else if (lower.includes("verb") || lower.includes("กริยา")) {
-        reply = "Verb (คำกริยา) คือ คำที่แสดงการกระทำหรือสภาพของประธาน เช่น run (วิ่ง), eat (กิน), หรือ is/am/are (เป็น, อยู่, คือ ครับ)";
-      } else if (lower.includes("โค้ด") || lower.includes("code") || lower.includes("programming") || lower.includes("javascript")) {
-        reply = "หากต้องการเขียนโค้ดหรือแก้ปัญหาโปรแกรม สามารถบอกโจทย์หรือภาษาที่ใช้ได้เลยครับ เดี๋ยวผมช่วยเขียนและอธิบายทีละขั้นตอนให้ครับ";
-      } else {
-        reply = `เกี่ยวกับ "${q}": เรื่องนี้น่าสนใจมากครับ! หากต้องการให้สรุปเนื้อหา อธิบายขั้นตอนการทำ หรือช่วยค้นหาข้อมูลส่วนไหนเพิ่มเติม บอกผมได้เลยนะครับ พร้อมช่วยเสมอครับ!`;
-      }
+  // 3. General conversational triggers
+  if (!reply) {
+    if (lower.includes("สวัสดี") || lower.includes("hi") || lower.includes("hello") || lower.includes("hey")) {
+      reply = "สวัสดีครับ! มีอะไรให้ผมช่วยวันนี้ไหมครับ ถามเรื่องการบ้าน วิชาเรียน หรือพูดคุยกันได้เลยนะ";
+    } else if (lower.includes("noun") || lower.includes("คำนาม")) {
+      reply = "คำนาม (Noun) คือคำที่ใช้เรียกชื่อคน สัตว์ สิ่งของ หรือสถานที่ครับ เช่น cat (แมว), school (โรงเรียน) หรือความสุข (happiness)";
+    } else if (lower.includes("verb") || lower.includes("กริยา")) {
+      reply = "คำกริยา (Verb) คือคำที่แสดงการกระทำหรือสภาพของประธานในประโยคครับ เช่น run (วิ่ง), eat (กิน) หรือ is/am/are (เป็น, อยู่, คือ)";
+    } else if (lower.includes("โค้ด") || lower.includes("code") || lower.includes("programming") || lower.includes("javascript") || lower.includes("python")) {
+      reply = "ยินดีช่วยเรื่องเขียนโค้ดเลยครับ! อยากให้ช่วยเขียนโค้ดภาษาอะไร หรือกำลังติดปัญหาตรงไหน ส่งโค้ดมาดูกันได้เลยครับ";
+    } else if (lower.includes("ขอบคุณ") || lower.includes("thanks") || lower.includes("thank you")) {
+      reply = "ด้วยความยินดีครับ! มีอะไรให้ช่วยเพิ่มบอกได้เลยนะ 😊";
+    } else {
+      // Natural direct conversational response
+      reply = `เข้าใจแล้วครับสำหรับเรื่อง "${q}" — เรื่องนี้น่าสนใจมากครับ มีประเด็นหลักคือการทำความเข้าใจความหมายและการนำไปปรับใช้ ถ้าต้องการให้อธิบายเจาะลึกส่วนไหน หรืออยากให้ช่วยสรุปอะไรเพิ่ม ถามผมได้เลยครับ!`;
     }
   }
 
