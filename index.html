@@ -234,14 +234,14 @@ async function sendAI(){
   let q=(aiUserInput?.value||'').trim();
   if(!q)return;
 
-  // Auto-detect homework queries and attach user task list if relevant
   const lowerQ = q.toLowerCase();
+  let cleanQ = q;
   if (lowerQ.includes("การบ้าน") || lowerQ.includes("งาน") || lowerQ.includes("homework") || lowerQ.includes("task") || lowerQ.includes("ค้าง") || lowerQ.includes("ส่งอะไร") || lowerQ.includes("what homework")) {
     const pending = (app.tasks||[]).filter(x => x.status === 'PENDING');
     const taskSummary = (app.tasks||[]).length === 0 ? "ยังไม่มีการบ้านในระบบ" : 
       `รายการการบ้านทั้งหมด (${(app.tasks||[]).length} งาน, ค้าง ${pending.length} งาน):\n` +
-      (app.tasks||[]).map(t => `- [${t.status}] ${t.title} (วิชา: ${t.subject || 'ไม่ระบุ'}, กำหนดส่ง: ${t.dueAt || 'ไม่ระบุ'}, ความสำคัญ: ${t.priority || 'NORMAL'})`).join('\n');
-    q = q + "\n\n[ข้อมูลการบ้านปัจจุบันของนักเรียน]:\n" + taskSummary;
+      (app.tasks||[]).map(t => `- [${t.status}] ${t.title} (วิชา: ${t.subject || 'ไม่ระบุ'}, กำหนดส่ง: ${t.dueAt || 'ไม่ระบุ'})`).join('\n');
+    cleanQ = q + "\n\n[ข้อมูลการบ้านปัจจุบันของนักเรียน]:\n" + taskSummary;
   }
 
   app.messages.push({role:'user',text:q});
@@ -269,45 +269,39 @@ async function sendAI(){
   } catch (err) {}
 
   if (!reply) {
-    const lower = q.toLowerCase();
+    const lower = q.toLowerCase().trim();
 
-    // 1. Math arithmetic evaluation (including Thai number words)
+    // Robust Math Evaluation
     try {
-      let exprTrans = lower
+      let mathStr = lower
         .replace(/ศูนย์/g, '0').replace(/หนึ่ง/g, '1').replace(/สอง/g, '2').replace(/สาม/g, '3').replace(/สี่/g, '4')
         .replace(/ห้า/g, '5').replace(/หก/g, '6').replace(/เจ็ด/g, '7').replace(/แปด/g, '8').replace(/เก้า/g, '9').replace(/สิบ/g, '10')
-        .replace(/what is/g, '').replace(/find/g, '').replace(/calculate/g, '').replace(/หาค่า/g, '').replace(/เท่ากับ/g, '').replace(/ได้/g, '')
+        .replace(/พาย/g, '3.14159').replace(/pi/g, '3.14159')
+        .replace(/what is/g, '').replace(/find/g, '').replace(/calculate/g, '').replace(/หาค่า/g, '').replace(/เท่ากับ/g, '').replace(/ได้/g, '').replace(/เท่าไร/g, '').replace(/เท่าไหร่/g, '')
         .replace(/บวก/g, '+').replace(/ลบ/g, '-').replace(/คูณ/g, '*').replace(/หาร/g, '/')
         .replace(/plus/g, '+').replace(/minus/g, '-').replace(/times/g, '*').replace(/multiplied by/g, '*').replace(/divided by/g, '/')
-        .replace(/[^0-9\+\-\*\/\.\(\)]/g, ' ')
-        .trim();
+        .replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
 
-      if (/^[\d\+\-\*\/\.\(\)\s]+$/.test(exprTrans) && /\d/.test(exprTrans)) {
-        let evalResult = Function('"use strict"; return (' + exprTrans + ')')();
-        if (evalResult !== undefined && !isNaN(evalResult)) {
-          reply = `${evalResult}`;
+      if (mathStr && /\d/.test(mathStr)) {
+        let val = Function('"use strict"; return (' + mathStr + ')')();
+        if (val !== undefined && !isNaN(val)) {
+          reply = String(val);
         }
       }
     } catch(e) {}
 
     if (!reply) {
-      // 2. Comprehensive universal knowledge synthesis for ANY topic
       if (lower.includes("สวัสดี") || lower.includes("hi") || lower.includes("hello") || lower.includes("hey")) {
-        reply = `สวัสดีครับ! ผม TUPP Homework AI (${app.aiModel}) ผู้ช่วยอัจฉริยะของคุณ พร้อมตอบทุกคำถาม ไม่ว่าจะเป็นการบ้าน วิชาการ เขียนโค้ด ความรู้ทั่วไป หรือเรื่องที่คุณสงสัย สอบถามมาได้เลยครับ!`;
-      } else if (lower.includes("โค้ด") || lower.includes("code") || lower.includes("javascript") || lower.includes("python") || lower.includes("html") || lower.includes("css") || lower.includes("bug") || lower.includes("program")) {
-        reply = `**การวิเคราะห์โค้ดและเขียนโปรแกรม (${app.aiModel}):**\n\nจากโจทย์หรือปัญหาที่คุณสอบถามเกี่ยวกับ "${q}":\n1. **แนวคิดหลัก:** ตรวจสอบโครงสร้าง ตรรกะ (Logic) และ Syntax ของภาษาที่ใช้\n2. **ตัวอย่างแนวทางการเขียนโค้ด:**\n\`\`\`javascript\n// ตัวอย่างโครงสร้างที่ถูกต้องและมีประสิทธิภาพ\nfunction solveProblem() {\n  console.log("Processing: ${q}");\n  return "Completed successfully!";\n}\nsolveProblem();\n\`\`\`\n3. **ข้อแนะนำเพิ่มเติม:** ควรทดสอบรันทีละส่วนและตรวจสอบ Console Error เพื่อความแม่นยำสูงสุดครับ`;
-      } else if (lower.includes("แปล") || lower.includes("translate") || lower.includes("english") || lower.includes("ภาษาอังกฤษ")) {
-        reply = `**การแปลภาษาและการเรียบเรียง (${app.aiModel}):**\nสำหรับการแปลหรือเรียบเรียงข้อความ "${q}":\n- **ความหมาย/บริบท:** แปลตรงตัวตามหลักไวยากรณ์และปรับสำนวนให้เป็นธรรมชาติ\n- หากต้องการให้แปลเป็นภาษาอังกฤษ/ไทย หรือปรับระดับทางการ สามารถแจ้งเพิ่มเติมได้เลยครับ!`;
+        reply = "สวัสดีครับ! มีอะไรให้ผมช่วยวันนี้ไหมครับ ถามเรื่องการบ้าน วิชาเรียน หรือพูดคุยทั่วไปได้เลยนะ";
+      } else if (lower.includes("noun") || lower.includes("คำนาม")) {
+        reply = "Noun (คำนาม) คือ คำที่ใช้เรียกชื่อคน สัตว์ สิ่งของ หรือสถานที่ครับ เช่น cat (แมว), school (โรงเรียน), หรือความสุข (happiness)";
+      } else if (lower.includes("verb") || lower.includes("กริยา")) {
+        reply = "Verb (คำกริยา) คือ คำที่แสดงการกระทำหรือสภาพของประธาน เช่น run (วิ่ง), eat (กิน), หรือ is/am/are (เป็น, อยู่, คือ ครับ)";
+      } else if (lower.includes("โค้ด") || lower.includes("code") || lower.includes("programming") || lower.includes("javascript")) {
+        reply = "หากต้องการเขียนโค้ดหรือแก้ปัญหาโปรแกรม สามารถบอกโจทย์หรือภาษาที่ใช้ได้เลยครับ เดี๋ยวผมช่วยเขียนและอธิบายทีละขั้นตอนให้ครับ";
       } else {
-      const qLower = q.toLowerCase();
-      if (qLower.includes("noun") || qLower.includes("คำนาม")) {
-        reply = "Noun (คำนาม) คือ คำที่ใช้เรียกชื่อคน, สัตว์, สิ่งของ, สถานที่ หรือความคิด เช่น cat (แมว), Bangkok (กรุงเทพฯ), happiness (ความสุข) ครับ มีทั้งคำนามทั่วไป (Common noun) และคำนามเฉพาะ (Proper noun)";
-      } else if (qLower.includes("verb") || qLower.includes("กริยา")) {
-        reply = "Verb (คำกริยา) คือ คำที่แสดงการกระทำ (Action) หรือสภาพ (State) ของประธานในประโยค เช่น run (วิ่ง), eat (กิน), is/am/are (เป็น, อยู่, คือ) ครับ";
-      } else {
-        reply = `เกี่ยวกับ "${q}": ขอสรุปสั้นๆ ว่าเป็นเรื่องสำคัญที่น่าเรียนรู้ครับ มีประเด็นหลักคือการทำความเข้าใจนิยามและการนำไปประยุกต์ใช้ หากต้องการให้อธิบายเจาะลึกส่วนไหน ถามเพิ่มเติมได้เลยครับ!`;
+        reply = `เกี่ยวกับ "${q}": เรื่องนี้น่าสนใจมากครับ! หากต้องการให้สรุปเนื้อหา อธิบายขั้นตอนการทำ หรือช่วยค้นหาข้อมูลส่วนไหนเพิ่มเติม บอกผมได้เลยนะครับ พร้อมช่วยเสมอครับ!`;
       }
-    }
     }
   }
 
@@ -316,7 +310,6 @@ async function sendAI(){
   render();
   setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20);
 }
-
 function drawLogos(){document.querySelectorAll('canvas[data-electric]').forEach(c=>{const ctx=c.getContext('2d');if(!ctx)return;let dpr=devicePixelRatio||1;let raf;function fit(){const r=c.getBoundingClientRect();c.width=r.width*dpr;c.height=r.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}fit();let t=0;function frame(){t+=.025;const r=c.getBoundingClientRect(),w=r.width,h=r.height;ctx.clearRect(0,0,w,h);const cx=w/2,cy=h/2,s=Math.min(w,h);for(let k=0;k<6;k++){ctx.beginPath();for(let i=0;i<=220;i++){const a=i/220*Math.PI*2;const rr=s*(.25+.07*Math.sin(a*5+t*2+k*.7))+k*.5;const x=cx+Math.cos(a+t*.2+k)*rr;const y=cy+Math.sin(a+t*.2+k)*rr;const g=2.2*Math.sin(a*9+t*3+k)+Math.sin(a*17-t*2);const xx=x+g,yy=y+Math.cos(a*11+t+k)*2; i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy)}ctx.strokeStyle=k%2?'rgba(239,58,151,.33)':'rgba(22,136,255,.45)';ctx.lineWidth=1.3;ctx.stroke()}ctx.beginPath();ctx.arc(cx,cy,s*.22,0,Math.PI*2);ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=2;ctx.stroke();raf=requestAnimationFrame(frame)}frame();window.addEventListener('resize',fit,{passive:true});c._electricStop=()=>cancelAnimationFrame(raf)})}
 function render(){shell()}
 render();
