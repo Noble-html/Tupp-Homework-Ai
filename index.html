@@ -247,6 +247,9 @@ async function googleLogin(requireCouncil=false){
  return {user:cred.user,profile,member:null,relogin:true};
 }
 async function googleRegister({role,id,displayName}){
+ if(role!=='student'&&role!=='teacher')throw Error('การลงทะเบียนด้วย Google ใช้ได้เฉพาะนักเรียนและครู');
+ if(!/^\d{5}$/.test(id))throw Error('กรอกรหัส 5 หลักในช่องด้านบนก่อน แล้วค่อยกดปุ่ม Google');
+ if(role==='teacher'&&String(displayName||'').trim().split(/\s+/).length<2)throw Error('กรอกชื่อและนามสกุลครูก่อน แล้วค่อยกดปุ่ม Google');
  const cred=await googleAuth();const email=String(cred.user.email||'').toLowerCase();
  if(!isTuppEmail(email)){await signOut(state.auth);throw Error('แอดมินไม่ต้องลงทะเบียน ใช้แท็บ CRT-AI / OCAO');}
  const fail=async e=>{if(cred._isNew){try{await deleteUser(cred.user)}catch{}}try{await signOut(state.auth)}catch{}throw e};
