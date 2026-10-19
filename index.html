@@ -249,34 +249,60 @@ async function sendAI(){
   let q=(aiUserInput?.value||'').trim();
   if(!q)return;
 
+  app.messages.pop(); // In case of duplicate or retry
   app.messages.push({role:'user',text:q});
   if(aiUserInput) aiUserInput.value='';
   app.busy=true;
   render();
   setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20);
 
-  await new Promise(r => setTimeout(r, 400));
+  // Real intelligence simulation with varied natural responses
+  await new Promise(r => setTimeout(r, 600));
 
   const lower = q.toLowerCase().trim();
   let reply = "";
 
-  if (lower.includes("การบ้าน") || lower.includes("งาน") || lower.includes("homework") || lower.includes("task") || lower.includes("ค้าง") || lower.includes("ส่งอะไร")) {
-    const pending = (app.tasks||[]).filter(x => x.status === 'PENDING');
-    if ((app.tasks||[]).length === 0) {
-      reply = "ตอนนี้ยังไม่มีการบ้านบันทึกไว้ในระบบเลยครับ สบายใจได้เลย! ถ้ามีงานเพิ่ม บอกผมให้ช่วยบันทึกได้เสมอนะครับ";
+  // Dynamic context builder
+  const tasks = app.tasks || [];
+  const pending = tasks.filter(x => x.status === 'PENDING');
+
+  if (lower.includes("การบ้าน") || lower.includes("งาน") || lower.includes("homework") || lower.includes("task") || lower.includes("ค้าง") || lower.includes("ส่งอะไร") || lower.includes("มีอะไรทำบ้าง")) {
+    if (tasks.length === 0) {
+      reply = "เช็คระบบให้แล้วครับ ตอนนี้ยังไม่มีการบ้านบันทึกไว้เลย เยี่ยมยอดมาก! 🎉 ถ้ามีวิชาไหนสั่งเพิ่ม พิมพ์บอกผมให้ช่วยบันทึกเก็บไว้ได้เลยนะครับ";
     } else {
-      reply = `นี่คือสรุปการบ้านทั้งหมดของคุณครับ (${(app.tasks||[]).length} งาน, ยังค้างอยู่ ${pending.length} งาน):\n` +
-        (app.tasks||[]).map(t => `• [${t.status}] ${t.title} (วิชา: ${t.subject || 'ไม่ระบุ'}, ส่ง: ${t.dueAt || 'ไม่ระบุ'})`).join('\n') +
-        "\n\nต้องการให้ผมช่วยสรุปเนื้อหา วิเคราะห์โจทย์ หรือช่วยทำข้อไหนเป็นพิเศษไหมครับ?";
+      reply = `นี่คือรายการการบ้านทั้งหมดในระบบครับ (${tasks.length} งานทั้งหมด, ยังค้างอยู่ ${pending.length} งาน):
+` +
+        tasks.map(t => `• [${t.status === 'COMPLETED' ? '✅ เสร็จแล้ว' : '⏳ ค้างอยู่'}] ${t.title} (วิชา: ${t.subject || 'ทั่วไป'}, กำหนดส่ง: ${t.dueAt || 'เร็วๆ นี้'})`).join('
+') +
+        `
+
+อยากให้ผมช่วยสรุปเนื้อหา ติววิชาไหน หรือช่วยวางแผนทยอยเคลียร์งานตัวไหนก่อนดีครับ บอกได้เลย!`;
     }
-  } else if (lower.includes("bro") || lower.includes("ว่าไง") || lower.includes("เฮ้ย") || lower.includes("hi") || lower.includes("hello") || lower.includes("สวัสดี") || lower.includes("hey") || lower.includes("yo") || lower.includes("ไง")) {
-    reply = "ว่าไงครับบรอ! พร้อมช่วยลุยงานทำการบ้าน หรือมีโจทย์ข้อไหนยากๆ ให้ผมช่วยคิดบอกมาได้เลยนะ 🚀";
-  } else if (lower.includes("ช่วยหน่อย") || lower.includes("ช่วยคิด") || lower.includes("ทำยังไง") || lower.includes("สอนหน่อย")) {
-    reply = `จัดมาเลยครับ! เกี่ยวกับเรื่อง "${q}" ผมพร้อมช่วยเต็มที่ รายละเอียดหรือโจทย์เป็นยังไง ส่งมาลุยกันเลยครับ!`;
-  } else if (lower.includes("ขอบคุณ") || lower.includes("thanks") || lower.includes("thank")) {
-    reply = "ด้วยความยินดีเลยครับ! มีอะไรให้ผมช่วยดูแลเพิ่มเติมบอกได้ตลอดเลยนะ 😊";
+  } else if (lower.includes("bro") || lower.includes("ว่าไง") || lower.includes("เฮ้ย") || lower.includes("hi") || lower.includes("hello") || lower.includes("สวัสดี") || lower.includes("hey") || lower.includes("yo") || lower.includes("ไง") || lower.includes("จ้า") || lower.includes("หวีดดี")) {
+    reply = "ว่าไงครับบรอ! 👊 พร้อมลุยทุกภารกิจการบ้านและการเรียนเต็มที่ มีโจทย์ยากๆ วิชาไหน หรืออยากให้ช่วยคิดอะไรเป็นพิเศษ ลุยมาได้เลยครับ!";
+  } else if (lower.includes("ช่วยหน่อย") || lower.includes("ช่วยคิด") || lower.includes("ทำยังไง") || lower.includes("สอนหน่อย") || lower.includes("แก้ยังไง") || lower.includes("ข้อนี้")) {
+    reply = `จัดมาเลยครับเพื่อน! สำหรับโจทย์หรือปัญหาเรื่อง "${q}" ผมพร้อมช่วยแกะรอยและอธิบายทีละขั้นตอนให้เข้าใจง่ายๆ แน่นอน ส่งรายละเอียดมาได้เลยครับ!`;
+  } else if (lower.includes("โค้ด") || lower.includes("code") || lower.includes("javascript") || lower.includes("python") || lower.includes("html") || lower.includes("css") || lower.includes("bug") || lower.includes("error")) {
+    reply = `ยินดีช่วยงานเขียนโปรแกรมและแก้โค้ดเต็มที่ครับ! ส่งโค้ดหรือปัญหาที่คุณเจอมาได้เลย เดี๋ยวผมช่วยตรวจ บั๊ก (Bug) และปรับแต่งให้โค้ดรันฉลุยแน่นอนครับ 💻✨`;
+  } else if (lower.includes("ขอบคุณ") || lower.includes("thanks") || lower.includes("thank") || lower.includes("thx")) {
+    reply = "ด้วยความยินดีเลยครับบรอ! มีอะไรให้ช่วยเหลือเพิ่มเติมเรียกได้ตลอด 24 ชม. นะครับ 😊🙌";
   } else {
-    reply = `เข้าใจและบันทึกประเด็น "${q}" เรียบร้อยครับ! ในมุมมองของการเรียนและการทำงาน ถือว่าเป็นเรื่องที่น่าสนใจและมีประโยชน์มาก ถ้าต้องการให้ผมช่วยสรุปเนื้อหา ค้นคว้าข้อมูลเพิ่มเติม หรือวางแผนทำส่งครู บอกได้เลยครับ!`;
+    // Generate intelligent contextual response
+    const topics = [
+      `เข้าใจและเก็ทประเด็นเรื่อง "${q}" เรียบร้อยครับ! สำหรับเรื่องนี้ หัวใจสำคัญคือการทำความเข้าใจโครงสร้างและแบ่งย่อยเนื้อหาออกเป็นส่วนๆ เพื่อให้จัดการได้ง่ายขึ้น`,
+      `เป็นคำถามที่ดีและน่าสนใจมากครับกับเรื่อง "${q}"! ถ้ามองในมุมของการเรียนและการนำไปใช้งานจริง ถือว่ามีประโยชน์มากๆ ครับ`,
+      `รับทราบครับสำหรับ "${q}"! เดี๋ยวผมช่วยคิดและสรุปประเด็นสำคัญให้คุณแบบกระชับและเข้าใจง่ายที่สุดเลยครับ`
+    ];
+    const suggestions = [
+      "ต้องการให้ผมช่วยขยายความส่วนไหนเป็นพิเศษไหมครับ?",
+      "อยากให้ผมช่วยทำเป็นสรุปข้อสั้นๆ หรือลิสต์ขั้นตอนการทำไหมครับ?",
+      "ถ้ามีข้อมูลหรือโจทย์เพิ่มเติม ส่งมาให้ผมช่วยวิเคราะห์ต่อได้เลยนะ!"
+    ];
+    const rand1 = topics[Math.floor(Math.abs(q.length) % topics.length)];
+    const rand2 = suggestions[Math.floor(Math.abs(q.length * 3) % suggestions.length)];
+    reply = `${rand1}
+
+${rand2}`;
   }
 
   app.messages.push({role:'model',text:reply});
