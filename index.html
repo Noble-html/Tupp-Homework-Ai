@@ -83,37 +83,17 @@ async function listHomework(){
   return Array.from(map.values());
 }
 async async function updateTaskStatus(taskId, status){
-  // Update local storage
   try {
-    const existingLocal = JSON.parse(localStorage.getItem('tupp_local_homework') || '[]');
-    let updated = false;
-    existingLocal.forEach(t => {
-      if(t.id === taskId) {
-        t.status = status;
-        t.updatedAt = new Date().toISOString();
-        updated = true;
-      }
-    });
-    if(updated) {
-      localStorage.setItem('tupp_local_homework', JSON.stringify(existingLocal));
-    }
-  } catch(e) {}
-
-  // Update memory state tasks if present
-  if(app.tasks) {
-    app.tasks.forEach(t => {
-      if(t.id === taskId) t.status = status;
-    });
-  }
-
-  // If not a local task, update Firestore
-  if (!taskId.startsWith('local_')) {
-    try {
-      await initFirebase();
-      await retry(()=>updateDoc(doc(state.db,'homework',taskId),{status,updatedAt:serverTimestamp()}));
-    } catch(e) {
-      console.warn('Firestore update status failed, updated locally:', e);
-    }
+    await initFirebase();
+    await retry(()=>updateDoc(doc(state.db,'homework',taskId),{
+      status,
+      updatedAt: serverTimestamp()
+    }));
+    await loadTasks();
+  } catch(e) {
+    console.error('Firebase update status failed:', e);
+    alert('ไม่สามารถอัปเดตสถานะใน Firebase ได้: ' + e.message);
+    throw e;
   }
 }
 async function notifyDiscord(data, type = 'homework') {
@@ -145,18 +125,20 @@ async function notifyDiscord(data, type = 'homework') {
 
 async function addHomework(data){
   notifyDiscord(data);
-  const localTask = { id: 'local_' + Date.now(), ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
-  try {
-    const existingLocal = JSON.parse(localStorage.getItem('tupp_local_homework') || '[]');
-    existingLocal.unshift(localTask);
-    localStorage.setItem('tupp_local_homework', JSON.stringify(existingLocal));
-  } catch(e) {}
   try {
     await initFirebase();
-    return await retry(()=>addDoc(collection(state.db,'homework'),{...data,createdAt:serverTimestamp(),updatedAt:serverTimestamp()}));
+    const docRef = await retry(()=>addDoc(collection(state.db,'homework'),{
+      ...data,
+      status: data.status || 'PENDING',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }));
+    await loadTasks();
+    return docRef;
   } catch(err) {
-    console.warn('Firebase sync failed, saved locally:', err);
-    return localTask;
+    console.error('Firebase save failed:', err);
+    alert('ไม่สามารถบันทึกข้อมูลลง Firebase ได้: ' + err.message);
+    throw err;
   }
 }
 async function listClass(classRoom){await initFirebase();const q=query(collection(state.db,'homework'),where('classRoom','==',classRoom),orderBy('dueAt','asc'),limit(500));return new Promise((resolve,reject)=>{const stop=onSnapshot(q,s=>resolve(s.docs.map(d=>({id:d.id,...d.data()}))),reject);state.listeners.add(stop);state.fb.activeListeners=state.listeners.size})}
