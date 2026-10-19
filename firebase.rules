@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email in ['rachata.le@gmail.com', '06554@tupp.ac.th', '06546@tupp.ac.th', 'thanawinnoble07@gmail.com'] ||
+         exists(/databases/$(database)/documents/councilMembers/$(request.auth.uid)));
+    }
+
+    // Council Members collection rules (allows specific emails or self-provisioning if allowed)
+    match /councilMembers/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (
+        isAdmin() || 
+        request.auth.token.email in ['rachata.le@gmail.com', '06554@tupp.ac.th', '06546@tupp.ac.th', 'thanawinnoble07@gmail.com']
+      );
+    }
+
+    // Default rules for other collections
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
