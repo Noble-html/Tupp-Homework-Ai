@@ -243,7 +243,7 @@ document.querySelectorAll('[data-submit-id]').forEach(b=>b.onclick=async()=>{con
       sendAI();
     });document.getElementById('systemCheck')?.addEventListener('click',async()=>{try{app.status='กำลังตรวจระบบ…';render();const r=await health();app.status=`Health document: ${r.healthDocument?'FOUND':'NOT FOUND'} • ${r.latency} ms`;render()}catch(e){app.status=e.message;render()}});document.getElementById('saveConfig')?.addEventListener('click',()=>{document.querySelectorAll('[data-cfg]').forEach(i=>firebaseConfig[i.dataset.cfg]=i.value.trim());saveCfg();state.app=state.auth=state.db=null;state.fb={configured:firebaseConfigured(),booted:false,persistence:'not-initialized',retryCount:0,lastError:'',lastSuccessAt:null,activeListeners:0};app.status='บันทึก Config แล้ว — กดรีโหลดหน้าเพื่อเริ่ม Firebase';render()});document.getElementById('loadClass')?.addEventListener('click',async()=>{app.classRoom=document.getElementById('classRoom').value.trim();try{app.classTasks=await listClass(app.classRoom);app.status=`โหลด ${app.classTasks.length} รายการ`;render()}catch(e){app.status=e.message;render()}})}
 async function loadTasks(){try{app.tasks=await listHomework();render()}catch(e){app.status=e.message;render()}}
-async function sendAI(){
+async async function sendAI(){
   if(app.busy)return;
   const aiUserInput=document.getElementById('aiInput');
   let q=(aiUserInput?.value||'').trim();
