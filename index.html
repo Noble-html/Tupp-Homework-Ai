@@ -249,20 +249,18 @@ async function sendAI(){
   let q=(aiUserInput?.value||'').trim();
   if(!q)return;
 
-  app.messages.pop(); // In case of duplicate or retry
+  app.messages.pop();
   app.messages.push({role:'user',text:q});
   if(aiUserInput) aiUserInput.value='';
   app.busy=true;
   render();
   setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20);
 
-  // Real intelligence simulation with varied natural responses
-  await new Promise(r => setTimeout(r, 600));
+  await new Promise(r => setTimeout(r, 400));
 
   const lower = q.toLowerCase().trim();
   let reply = "";
 
-  // Dynamic context builder
   const tasks = app.tasks || [];
   const pending = tasks.filter(x => x.status === 'PENDING');
 
@@ -270,13 +268,9 @@ async function sendAI(){
     if (tasks.length === 0) {
       reply = "เช็คระบบให้แล้วครับ ตอนนี้ยังไม่มีการบ้านบันทึกไว้เลย เยี่ยมยอดมาก! 🎉 ถ้ามีวิชาไหนสั่งเพิ่ม พิมพ์บอกผมให้ช่วยบันทึกเก็บไว้ได้เลยนะครับ";
     } else {
-      reply = `นี่คือรายการการบ้านทั้งหมดในระบบครับ (${tasks.length} งานทั้งหมด, ยังค้างอยู่ ${pending.length} งาน):
-` +
-        tasks.map(t => `• [${t.status === 'COMPLETED' ? '✅ เสร็จแล้ว' : '⏳ ค้างอยู่'}] ${t.title} (วิชา: ${t.subject || 'ทั่วไป'}, กำหนดส่ง: ${t.dueAt || 'เร็วๆ นี้'})`).join('
-') +
-        `
-
-อยากให้ผมช่วยสรุปเนื้อหา ติววิชาไหน หรือช่วยวางแผนทยอยเคลียร์งานตัวไหนก่อนดีครับ บอกได้เลย!`;
+      reply = `นี่คือรายการการบ้านทั้งหมดในระบบครับ (${tasks.length} งานทั้งหมด, ยังค้างอยู่ ${pending.length} งาน):\n` +
+        tasks.map(t => `• [${t.status === 'COMPLETED' ? '✅ เสร็จแล้ว' : '⏳ ค้างอยู่'}] ${t.title} (วิชา: ${t.subject || 'ทั่วไป'}, กำหนดส่ง: ${t.dueAt || 'เร็วๆ นี้'})`).join('\n') +
+        `\n\nอยากให้ผมช่วยสรุปเนื้อหา ติววิชาไหน หรือช่วยวางแผนทยอยเคลียร์งานตัวไหนก่อนดีครับ บอกได้เลย!`;
     }
   } else if (lower.includes("bro") || lower.includes("ว่าไง") || lower.includes("เฮ้ย") || lower.includes("hi") || lower.includes("hello") || lower.includes("สวัสดี") || lower.includes("hey") || lower.includes("yo") || lower.includes("ไง") || lower.includes("จ้า") || lower.includes("หวีดดี")) {
     reply = "ว่าไงครับบรอ! 👊 พร้อมลุยทุกภารกิจการบ้านและการเรียนเต็มที่ มีโจทย์ยากๆ วิชาไหน หรืออยากให้ช่วยคิดอะไรเป็นพิเศษ ลุยมาได้เลยครับ!";
@@ -287,22 +281,7 @@ async function sendAI(){
   } else if (lower.includes("ขอบคุณ") || lower.includes("thanks") || lower.includes("thank") || lower.includes("thx")) {
     reply = "ด้วยความยินดีเลยครับบรอ! มีอะไรให้ช่วยเหลือเพิ่มเติมเรียกได้ตลอด 24 ชม. นะครับ 😊🙌";
   } else {
-    // Generate intelligent contextual response
-    const topics = [
-      `เข้าใจและเก็ทประเด็นเรื่อง "${q}" เรียบร้อยครับ! สำหรับเรื่องนี้ หัวใจสำคัญคือการทำความเข้าใจโครงสร้างและแบ่งย่อยเนื้อหาออกเป็นส่วนๆ เพื่อให้จัดการได้ง่ายขึ้น`,
-      `เป็นคำถามที่ดีและน่าสนใจมากครับกับเรื่อง "${q}"! ถ้ามองในมุมของการเรียนและการนำไปใช้งานจริง ถือว่ามีประโยชน์มากๆ ครับ`,
-      `รับทราบครับสำหรับ "${q}"! เดี๋ยวผมช่วยคิดและสรุปประเด็นสำคัญให้คุณแบบกระชับและเข้าใจง่ายที่สุดเลยครับ`
-    ];
-    const suggestions = [
-      "ต้องการให้ผมช่วยขยายความส่วนไหนเป็นพิเศษไหมครับ?",
-      "อยากให้ผมช่วยทำเป็นสรุปข้อสั้นๆ หรือลิสต์ขั้นตอนการทำไหมครับ?",
-      "ถ้ามีข้อมูลหรือโจทย์เพิ่มเติม ส่งมาให้ผมช่วยวิเคราะห์ต่อได้เลยนะ!"
-    ];
-    const rand1 = topics[Math.floor(Math.abs(q.length) % topics.length)];
-    const rand2 = suggestions[Math.floor(Math.abs(q.length * 3) % suggestions.length)];
-    reply = `${rand1}
-
-${rand2}`;
+    reply = `เข้าใจและเก็ทประเด็นเรื่อง "${q}" เรียบร้อยครับ! สำหรับเรื่องนี้ หัวใจสำคัญคือการทำความเข้าใจโครงสร้างและแบ่งย่อยเนื้อหาออกเป็นส่วนๆ เพื่อให้จัดการได้ง่ายขึ้น หากต้องการให้ผมช่วยขยายความส่วนไหน บอกได้เลยครับ!`;
   }
 
   app.messages.push({role:'model',text:reply});
