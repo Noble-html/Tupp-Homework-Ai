@@ -255,61 +255,28 @@ async function sendAI(){
   render();
   setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20);
 
-  // Simulate slight natural typing delay
   await new Promise(r => setTimeout(r, 400));
 
   const lower = q.toLowerCase().trim();
   let reply = "";
 
-  // 1. Homework queries
   if (lower.includes("การบ้าน") || lower.includes("งาน") || lower.includes("homework") || lower.includes("task") || lower.includes("ค้าง") || lower.includes("ส่งอะไร")) {
     const pending = (app.tasks||[]).filter(x => x.status === 'PENDING');
     if ((app.tasks||[]).length === 0) {
-      reply = "ตอนนี้ยังไม่มีการบ้านบันทึกไว้ในระบบเลยครับ สบายใจได้เลย! ถ้ามีงานเพิ่ม บอกผมให้ช่วยบันทึกได้เสมอนะ";
+      reply = "ตอนนี้ยังไม่มีการบ้านบันทึกไว้ในระบบเลยครับ สบายใจได้เลย! ถ้ามีงานเพิ่ม บอกผมให้ช่วยบันทึกได้เสมอนะครับ";
     } else {
-      reply = `นี่คือรายการการบ้านทั้งหมดครับ (${(app.tasks||[]).length} งาน, ค้างอยู่ ${pending.length} งาน):\n` +
-        (app.tasks||[]).map(t => `- [${t.status}] ${t.title} (วิชา: ${t.subject || 'ไม่ระบุ'}, กำหนดส่ง: ${t.dueAt || 'ไม่ระบุ'})`).join('\n') +
-        "\n\nมีวิชาไหนอยากให้ผมช่วยทำหรือสรุปเนื้อหาให้ไหมครับ?";
+      reply = `นี่คือสรุปการบ้านทั้งหมดของคุณครับ (${(app.tasks||[]).length} งาน, ยังค้างอยู่ ${pending.length} งาน):\n` +
+        (app.tasks||[]).map(t => `• [${t.status}] ${t.title} (วิชา: ${t.subject || 'ไม่ระบุ'}, ส่ง: ${t.dueAt || 'ไม่ระบุ'})`).join('\n') +
+        "\n\nต้องการให้ผมช่วยสรุปเนื้อหา วิเคราะห์โจทย์ หรือช่วยทำข้อไหนเป็นพิเศษไหมครับ?";
     }
-  }
-
-  // 2. Math evaluation (including Thai number words)
-  if (!reply) {
-    try {
-      let mathStr = lower
-        .replace(/ศูนย์/g, '0').replace(/หนึ่ง/g, '1').replace(/สอง/g, '2').replace(/สาม/g, '3').replace(/สี่/g, '4')
-        .replace(/ห้า/g, '5').replace(/หก/g, '6').replace(/เจ็ด/g, '7').replace(/แปด/g, '8').replace(/เก้า/g, '9').replace(/สิบ/g, '10')
-        .replace(/พาย/g, '3.14159').replace(/pi/g, '3.14159')
-        .replace(/what is/g, '').replace(/find/g, '').replace(/calculate/g, '').replace(/หาค่า/g, '').replace(/เท่ากับ/g, '').replace(/ได้/g, '').replace(/เท่าไร/g, '').replace(/เท่าไหร่/g, '')
-        .replace(/บวก/g, '+').replace(/ลบ/g, '-').replace(/คูณ/g, '*').replace(/หาร/g, '/')
-        .replace(/plus/g, '+').replace(/minus/g, '-').replace(/times/g, '*').replace(/multiplied by/g, '*').replace(/divided by/g, '/')
-        .replace(/[^0-9\+\-\*\/\.\(\)]/g, '');
-
-      if (mathStr && /\d/.test(mathStr)) {
-        let val = Function('"use strict"; return (' + mathStr + ')')();
-        if (val !== undefined && !isNaN(val)) {
-          reply = `${val} ครับ`;
-        }
-      }
-    } catch(e) {}
-  }
-
-  // 3. General conversational triggers
-  if (!reply) {
-    if (lower.includes("สวัสดี") || lower.includes("hi") || lower.includes("hello") || lower.includes("hey")) {
-      reply = "สวัสดีครับ! มีอะไรให้ผมช่วยวันนี้ไหมครับ ถามเรื่องการบ้าน วิชาเรียน หรือพูดคุยกันได้เลยนะ";
-    } else if (lower.includes("noun") || lower.includes("คำนาม")) {
-      reply = "คำนาม (Noun) คือคำที่ใช้เรียกชื่อคน สัตว์ สิ่งของ หรือสถานที่ครับ เช่น cat (แมว), school (โรงเรียน) หรือความสุข (happiness)";
-    } else if (lower.includes("verb") || lower.includes("กริยา")) {
-      reply = "คำกริยา (Verb) คือคำที่แสดงการกระทำหรือสภาพของประธานในประโยคครับ เช่น run (วิ่ง), eat (กิน) หรือ is/am/are (เป็น, อยู่, คือ)";
-    } else if (lower.includes("โค้ด") || lower.includes("code") || lower.includes("programming") || lower.includes("javascript") || lower.includes("python")) {
-      reply = "ยินดีช่วยเรื่องเขียนโค้ดเลยครับ! อยากให้ช่วยเขียนโค้ดภาษาอะไร หรือกำลังติดปัญหาตรงไหน ส่งโค้ดมาดูกันได้เลยครับ";
-    } else if (lower.includes("ขอบคุณ") || lower.includes("thanks") || lower.includes("thank you")) {
-      reply = "ด้วยความยินดีครับ! มีอะไรให้ช่วยเพิ่มบอกได้เลยนะ 😊";
-    } else {
-      // Natural direct conversational response
-      reply = `เข้าใจแล้วครับสำหรับเรื่อง "${q}" — เรื่องนี้น่าสนใจมากครับ มีประเด็นหลักคือการทำความเข้าใจความหมายและการนำไปปรับใช้ ถ้าต้องการให้อธิบายเจาะลึกส่วนไหน หรืออยากให้ช่วยสรุปอะไรเพิ่ม ถามผมได้เลยครับ!`;
-    }
+  } else if (lower.includes("bro") || lower.includes("ว่าไง") || lower.includes("เฮ้ย") || lower.includes("hi") || lower.includes("hello") || lower.includes("สวัสดี") || lower.includes("hey") || lower.includes("yo") || lower.includes("ไง")) {
+    reply = "ว่าไงครับบรอ! พร้อมช่วยลุยงานทำการบ้าน หรือมีโจทย์ข้อไหนยากๆ ให้ผมช่วยคิดบอกมาได้เลยนะ 🚀";
+  } else if (lower.includes("ช่วยหน่อย") || lower.includes("ช่วยคิด") || lower.includes("ทำยังไง") || lower.includes("สอนหน่อย")) {
+    reply = `จัดมาเลยครับ! เกี่ยวกับเรื่อง "${q}" ผมพร้อมช่วยเต็มที่ รายละเอียดหรือโจทย์เป็นยังไง ส่งมาลุยกันเลยครับ!`;
+  } else if (lower.includes("ขอบคุณ") || lower.includes("thanks") || lower.includes("thank")) {
+    reply = "ด้วยความยินดีเลยครับ! มีอะไรให้ผมช่วยดูแลเพิ่มเติมบอกได้ตลอดเลยนะ 😊";
+  } else {
+    reply = `เข้าใจและบันทึกประเด็น "${q}" เรียบร้อยครับ! ในมุมมองของการเรียนและการทำงาน ถือว่าเป็นเรื่องที่น่าสนใจและมีประโยชน์มาก ถ้าต้องการให้ผมช่วยสรุปเนื้อหา ค้นคว้าข้อมูลเพิ่มเติม หรือวางแผนทำส่งครู บอกได้เลยครับ!`;
   }
 
   app.messages.push({role:'model',text:reply});
