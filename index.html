@@ -82,7 +82,40 @@ async function listHomework(){
   [...cloudTasks, ...localTasks].forEach(t => { if(t && t.title) map.set(t.id || t.title+t.dueAt, t); });
   return Array.from(map.values());
 }
-async function updateTaskStatus(taskId, status){await initFirebase();return retry(()=>updateDoc(doc(state.db,'homework',taskId),{status,updatedAt:serverTimestamp()}))}
+async async function updateTaskStatus(taskId, status){
+  // Update local storage
+  try {
+    const existingLocal = JSON.parse(localStorage.getItem('tupp_local_homework') || '[]');
+    let updated = false;
+    existingLocal.forEach(t => {
+      if(t.id === taskId) {
+        t.status = status;
+        t.updatedAt = new Date().toISOString();
+        updated = true;
+      }
+    });
+    if(updated) {
+      localStorage.setItem('tupp_local_homework', JSON.stringify(existingLocal));
+    }
+  } catch(e) {}
+
+  // Update memory state tasks if present
+  if(app.tasks) {
+    app.tasks.forEach(t => {
+      if(t.id === taskId) t.status = status;
+    });
+  }
+
+  // If not a local task, update Firestore
+  if (!taskId.startsWith('local_')) {
+    try {
+      await initFirebase();
+      await retry(()=>updateDoc(doc(state.db,'homework',taskId),{status,updatedAt:serverTimestamp()}));
+    } catch(e) {
+      console.warn('Firestore update status failed, updated locally:', e);
+    }
+  }
+}
 async function notifyDiscord(data, type = 'homework') {
   const webhookHomework = "https://discord.com/api/webhooks/1560956010154303541/TkHsI7ybOygVqpZ_b08mLCFcSvNuokm6GL5aJNOLBPRKVFeQmwZl81f4pdv__xAzANUW";
   const webhookAnnouncement = "https://discord.com/api/webhooks/1560956064969658431/tynHTYiP0IMpaIVrPXQ4rbh8cZdwJdllXFJw9RCoRsTlkFpr0hK4tqpQSfaKSk4Sc0OG";
