@@ -322,5 +322,29 @@ function render(){shell()}
 render();
 if(firebaseConfigured()){initFirebase().then(()=>{loadTasks();}).catch(e=>{state.fb.lastError=e.message;render()});}
 </script>
+
+<script>
+const NVIDIA_API_KEY = "Nvapi-QgD3E_LuXFTt7xg7yGCfzFnoh9FuOM8q3Wa6GGQSLx8lCykrCKXh8mfpJzXWJDv4";
+async function callNemotronAI(promptText) {
+    const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + NVIDIA_API_KEY
+        },
+        body: JSON.stringify({
+            model: "nvidia/llama-3.1-nemotron-70b-instruct",
+            messages: [
+                { role: "system", content: "คุณคือ TUPPI ผู้ช่วยอัจฉริยะประจำแพลตฟอร์มการศึกษา ภายใต้ สภา CRT-AI" },
+                { role: "user", content: promptText }
+            ],
+            stream: false
+        })
+    });
+    const data = await response.json();
+    return data.choices[0].message.content;
+}
+</script>
+
 </body>
 </html>
