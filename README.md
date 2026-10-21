@@ -1,33 +1,59 @@
-# TUPP AI V43 — Firebase Core + Gemini + ElectricLogo
+# TUPP Homework AI V50 — Backend-only Firebase + NVIDIA NIM
+
+TUPP Homework AI is a React/Vite educational prototype. This version deliberately keeps **Firebase out of the browser**: the frontend does not import or initialize the Firebase Web SDK, does not receive a Firebase Web Config, and does not read or write Firestore directly. The browser calls same-origin `/api/*` routes only.
 
 ## Architecture
-- React + Vite
-- Firebase Authentication + Firestore as the only application data backend
-- Firebase multi-tab IndexedDB persistence and exponential-backoff retry
-- Gemini is called through `/api/gemini`; the Gemini API key stays server-side
-- `ElectricLogo` accepts the requested React Bits-style props and uses OGL
 
-## Firebase collections
-- `profiles`
-- `homework`
-- `councilMembers`
-- `audit`
-- `system/health`
+- `/api/auth`: handles email/password login and registration by calling Firebase Identity Toolkit from the server; exchanges the returned ID token for a 5-day Firebase session cookie (`HttpOnly`, `SameSite=Lax`, and `Secure` in production).
+- `/api/data`: reads and writes Firestore using Firebase Admin SDK only; applies per-action checks for the signed-in UID, student ID, teacher status, and council roles.
+- `/api/admin-invites`: admin invitations and teacher approval are authorized from the HttpOnly session cookie and server-side `councilMembers` role records.
+- `/api/nvidia`: verifies the server session cookie before forwarding inference to NVIDIA NIM. The NVIDIA API key remains server-side.
+- `firebase.rules`: denies all direct client Firestore reads/writes as defense in depth. Deploy these rules; Firebase Admin SDK server operations are not blocked by client Firestore Rules.
+- There is no `firebase-config.json`, no `/api/firebase-config`, no `VITE_FIREBASE_*` variable, and no client `firebase` dependency.
 
-## Council legacy registry
-The four legacy accounts are preserved as metadata in `src/services/firebase.js`:
-CAO, D-CAO, SCAO/HSA, and SCAO/HSA. Actual authentication must be created in Firebase Auth; passwords are never stored in source code.
+## One-time setup
 
-## Production setup
-1. Copy `.env.example` to `.env.local`.
-2. Add Firebase Web App configuration values.
-3. Enable Firebase Authentication (Email/Password and Anonymous if desired).
-4. Create Firestore Security Rules so students can only read/write their own data, while teachers/council members receive role-based access.
-5. Set `GEMINI_API_KEY` in the hosting provider's server environment, never in `VITE_*` variables.
-6. Deploy the Vite app and serverless `api/gemini` endpoint together.
+1. In Firebase Console, select the project `tupp-homework-ai`, enable **Authentication → Sign-in method → Email/Password**, and create Firestore.
+2. Create a service-account credential for the trusted server and place its JSON as `FIREBASE_SERVICE_ACCOUNT_JSON` in the hosting provider's server-only Environment Variables. Never commit this JSON or put it in frontend code.
+3. Set `FIREBASE_AUTH_API_KEY` to the Web API key for the same Firebase project. The browser never receives this value; the backend uses it to call Firebase Identity Toolkit for email/password sign-in. In Google Cloud API-key settings, ensure the key is compatible with server-side Identity Toolkit requests and restricted to only the required APIs where practical. It is an API key, not a substitute for the service-account credential.
+4. Set `ADMIN_BOOTSTRAP_SECRET` to a random string of at least 24 characters. Optionally set `ADMIN_RECOVERY_SECRET` to a separate random value of 32+ characters, for one-time recovery only if no active CAO remains.
+5. Set `NVIDIA_API_KEY`. Optionally set `NVIDIA_BASE_URL` and `NVIDIA_LLAMA31_70B_BASE_URL` as appropriate. Do not prefix secrets with `VITE_`.
+6. Deploy Firestore rules from `firebase.rules` (the included `firebase.json` points to that file). These rules intentionally deny all browser SDK access; the app's server APIs use Firebase Admin SDK.
+7. Deploy to a serverless Node host such as Vercel. Use `npm install` and `npm run build`, with Vite's `dist` output. The host must route `/api/*.js` as Node functions and supply the Environment Variables in the target deployment scope. Running plain `npm run dev` starts Vite only; to test serverless API routes locally, use the host's local runtime (for example `vercel dev`) with the same server environment variables.
+8. Open the deployed site, go to **ลงทะเบียนครั้งแรก → Admin**, and register the first CAO using the one-time `ADMIN_BOOTSTRAP_SECRET`. This operation succeeds only while the council directory is empty. After the first admin, create new admin invitations through the admin console.
+9. Test with non-sensitive student and teacher test accounts first. Confirm login, registration, session restoration, homeworks, admin invite, and teacher approval before real use.
 
-## Stability design
-The client retries Firebase operations with exponential backoff, keeps Firestore persistence enabled when available, and exposes latency/retry/listener state in the Council Admin Firebase Operations Center. 24/7 availability still depends on Firebase, hosting, quotas, network reachability, and correct security rules.
+## Required environment variables (`.env.example`)
 
-## React Bits source
-ElectricLogo was located in the public React Bits repository and its JS+CSS registry variant declares `ogl@^1.0.11` as its dependency. This project keeps the same public API shape so it can be swapped for the exact registry source when the project's normal React Bits registry workflow is enabled.
+- `FIREBASE_SERVICE_ACCOUNT_JSON` — Firebase Admin SDK server credential.
+- `FIREBASE_AUTH_API_KEY` — Firebase Identity Toolkit key used on the server only.
+- `FIREBASE_PROJECT_ID` — optional when service account already contains `project_id`.
+- `ADMIN_BOOTSTRAP_SECRET` — first-admin setup, one-time.
+- `NVIDIA_API_KEY` — NVIDIA NIM inference.
+
+Optional: `ADMIN_RECOVERY_SECRET`, `NVIDIA_BASE_URL`, `NVIDIA_LLAMA31_70B_BASE_URL`.
+
+## Session and security model
+
+- The frontend never stores or receives a Firebase ID token. The server sets an `HttpOnly` session cookie; JavaScript cannot read the cookie value. The client can only call same-origin API routes.
+- Session cookies last up to five days and are verified/revocation-checked in the server. Logout clears the browser cookie; users can also disable a user or revoke refresh tokens from Firebase Admin if a server-side session must be invalidated immediately.
+- `/api/auth` and `/api/data` check same-origin POST requests. Use HTTPS in production. Do not enable permissive CORS for these endpoints.
+- The server never trusts client-supplied UID/role/creator fields for data access; identity and roles are derived from the verified session and Firestore records.
+- Firebase Admin SDK bypasses Firestore Rules, so every server route must retain its own authorization checks. Review code and rules before production.
+- A serverless design does not require a human administrator to keep a browser open, but cannot promise 100% uptime; actual availability depends on Firebase, hosting provider, quotas, billing, network, and NVIDIA access.
+
+## NVIDIA model routing
+
+- Nemotron 3 Ultra and Llama 3.1 Nemotron 70B are text routes. The free hosted Llama endpoint may be deprecated; configure an available NIM endpoint if needed.
+- Nemotron VoiceChat is a full-duplex audio model and is not sent to the text `/v1/chat/completions` endpoint.
+
+## Commands
+
+```bash
+npm install
+npm run dev  # Vite frontend only; API routes need a serverless dev runtime
+npm run build
+npm run preview  # frontend preview only
+```
+
+This is a prototype, not an official TUPP school service. Obtain the school's privacy/security review before handling genuine student records.

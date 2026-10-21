@@ -1,0 +1,20 @@
+TUPP HOMEWORK AI V50 — ตั้ง Firebase ฝั่งหลังบ้านครั้งเดียว
+
+หลักการ: หน้าเว็บไม่ต้องใช้ Firebase Web SDK, ไม่รับ Firebase Web Config และไม่เรียก Firestore โดยตรง
+
+1) เปิด Firebase Console ของโปรเจกต์ tupp-homework-ai
+2) เปิด Authentication > Sign-in method > Email/Password และเปิดใช้งาน
+3) สร้าง Firestore Database
+4) สร้าง Service Account สำหรับ backend; ใส่ JSON เป็น FIREBASE_SERVICE_ACCOUNT_JSON ใน Environment Variables ของโฮสต์เท่านั้น
+5) ใส่ Firebase Web API Key ของโปรเจกต์เดียวกันเป็น FIREBASE_AUTH_API_KEY ใน Environment Variables ของโฮสต์เท่านั้น (backend ใช้เรียก Identity Toolkit; ไม่ส่งให้ browser)
+6) ตั้ง ADMIN_BOOTSTRAP_SECRET เป็นรหัสสุ่มยาวอย่างน้อย 24 ตัวอักษร
+7) ตั้ง NVIDIA_API_KEY หากต้องการใช้ AI
+8) Deploy โปรเจกต์นี้ไปยังโฮสต์ที่รองรับ Node serverless API เช่น Vercel แล้ว Deploy ใหม่เมื่อเปลี่ยน Environment Variables
+9) Deploy firebase.rules เพื่อปิดการอ่าน/เขียน Firestore จาก browser SDK ทั้งหมด (Firebase Admin SDK จาก server ยังใช้งานได้)
+10) เปิดเว็บไซต์ > ลงทะเบียนครั้งแรก > Admin เพื่อตั้ง CAO คนแรกด้วย ADMIN_BOOTSTRAP_SECRET
+
+อย่าเพิ่ม FIREBASE_WEB_CONFIG_JSON, VITE_FIREBASE_* หรือ firebase-config.json เข้า frontend
+ห้ามนำ FIREBASE_SERVICE_ACCOUNT_JSON, ADMIN_BOOTSTRAP_SECRET, ADMIN_RECOVERY_SECRET และ NVIDIA_API_KEY ไปใส่ HTML หรือ client code
+
+การล็อกอินใช้ HttpOnly session cookie อายุสูงสุด 5 วัน ไม่ใช่ Firebase client session ใน localStorage
+Logout จะล้าง cookie ของเบราว์เซอร์นั้น
