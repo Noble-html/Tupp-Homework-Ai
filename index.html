@@ -222,6 +222,7 @@ const LEGACY_COUNCIL_REGISTRY=[
  {email:'06546@tupp.ac.th',roles:['SCAO','HSA'],access:['SO-1','LEGACY-S']}
 ];
 const state={app:null,auth:null,db:null,fb:{configured:false,booted:false,persistence:'not-initialized',retryCount:0,lastError:'',lastSuccessAt:null,activeListeners:0},listeners:new Set()};
+let googleProvider;
 const cfgKey='tupp_ai_v47_firebase_config';
 const defaultFirebaseConfig={apiKey:'AIzaSyBi2-gI4R2hfEXEY2pyZr67jhpdVXEOt4k',authDomain:'tupp-homework-ai.firebaseapp.com',projectId:'tupp-homework-ai',storageBucket:'tupp-homework-ai.firebasestorage.app',messagingSenderId:'472435152177',appId:'1:472435152177:web:fc7cb9678163e5c9b74c10',measurementId:'G-51XL8R5BRQ'};
 let savedConfig={};try{savedConfig=JSON.parse(localStorage.getItem(cfgKey)||'{}')}catch{}
@@ -286,7 +287,7 @@ async function initFirebase(){
  // Give this app a stable, project-specific name instead of accidentally reusing another Firebase app.
  const appName='tupp-homework-ai-'+String(firebaseConfig.projectId).replace(/[^a-zA-Z0-9-]/g,'-');
  state.app=getApps().find(a=>a.name===appName) || initializeApp(firebaseConfig,appName);
- state.auth=getAuth(state.app);state.db=getFirestore(state.app);const googleProvider = new GoogleAuthProvider(); googleProvider.setCustomParameters({ 'hd': 'tupp.ac.th' });
+ state.auth=getAuth(state.app);state.db=getFirestore(state.app);googleProvider = new GoogleAuthProvider(); googleProvider.setCustomParameters({ 'hd': 'tupp.ac.th' });
  try{await enableMultiTabIndexedDbPersistence(state.db);state.fb.persistence='enabled'}catch(e){state.fb.persistence=(e?.code==='failed-precondition'?'another-tab-active':'memory/cache unavailable')}
  state.fb.booted=true;state.fb.configured=true;state.fb.lastSuccessAt=Date.now();state.fb.lastError='';render();
 }
