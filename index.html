@@ -312,7 +312,7 @@ const AI_MODELS={
  'nvidia/llama-3.1-nemotron-70b-instruct':{name:'Llama 3.1 Nemotron 70B Instruct',short:'INSTRUCT CHAT',kind:'text',params:'70B parameters',context:'Deployment-dependent; confirm the serving profile',input:'Text',output:'Text',arch:'NVIDIA-customized Llama 3.1 70B Instruct',use:'แชตทั่วไป คำสั่งแบบมีโครงสร้าง การสร้างภาษา และโค้ด',availability:'NVIDIA hosted free endpoint is marked deprecated; may require a self-hosted NIM endpoint'},
  'nvidia/nemotron-voicechat':{name:'Nemotron 3 VoiceChat',short:'REAL-TIME VOICE',kind:'voice',params:'12B parameters',context:'Realtime audio interaction; not a standard text-chat context window',input:'Audio + text prompt; 16 kHz audio',output:'Speech audio 22.05 kHz + text/transcription',arch:'Full-duplex speech-to-speech; Fast Conformer encoder + Nemotron Nano V2 9B backbone + TTS decoder',use:'สนทนาด้วยเสียงแบบเรียลไทม์ ฟังและพูดได้พร้อมกัน',availability:'Early-access evaluation; requires the dedicated compatible VoiceChat service, not /chat/completions'}
 };
-const app={page:'school',session:null,member:null,userProfile:null,authMode:'general',authOpen:false,status:'',tasks:[],classTasks:[],studentId:'',selectedModel:'nvidia/nemotron-3-ultra-550b-a55b',aiMode:'reasoning',messages:[{role:'model',text:'สวัสดีครับ ผม TUPP Homework AI เชื่อมต่อ NVIDIA NIM ช่วยอธิบายบทเรียน คิดเป็นขั้นตอน และทบทวนวิชาได้ ลองพิมพ์คำถามของคุณได้เลย'}],busy:false,form:{title:'',subject:'',dueAt:'',priority:'NORMAL',scoreMax:'10',note:''},classRoom:'',pendingTeachers:[],inviteUrl:'',nvidiaEndpoint:'/api/nvidia'};
+const app={page:'school',session:null,member:null,userProfile:null,authMode:'general',authOpen:false,status:'',tasks:[],classTasks:[],studentId:'',selectedModel:'nvidia/nemotron-3-ultra-550b-a55b',aiMode:'reasoning',messages:[{role:'model',text:'สวัสดีครับ ผม TUPP Homework AI เชื่อมต่อ NVIDIA NIM ช่วยอธิบายบทเรียน คิดเป็นขั้นตอน และทบทวนวิชาได้ ลองพิมพ์คำถามของคุณได้เลย'}],busy:false,form:{title:'',subject:'',dueAt:'',priority:'NORMAL',scoreMax:'10',note:''},classRoom:'',pendingTeachers:[],inviteUrl:'',nvidiaEndpoint:'https://integrate.api.nvidia.com/v1/chat/completions'};
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function setStatus(s){app.status=s;render()}
 function nav(k){app.page=k;window.scrollTo({top:0,behavior:'smooth'});render()}
@@ -334,7 +334,28 @@ async function sendAI(){
    app.messages.push({role:'user',text:q},{role:'model',text:'VoiceChat เป็นโมเดลเสียงแบบ full-duplex 12B ไม่ใช่ text chat endpoint ปัจจุบัน /api/nvidia ใช้ chat/completions จึงยังไม่ส่งข้อความนี้ไปยัง VoiceChat เพื่อป้องกันการเรียก API ผิดรูปแบบ ต้องเปิดใช้ VoiceChat realtime endpoint และสิทธิ์ early access ก่อน'});render();return;
  }
  app.messages.push({role:'user',text:q});app.busy=true;render();
- try{const token=await user.getIdToken();const r=await fetch(app.nvidiaEndpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({model:app.selectedModel,mode:app.aiMode,messages:app.messages.map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}))})});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||`NVIDIA NIM request failed (${r.status})`);app.messages.push({role:'model',text:(d.text||'NVIDIA NIM ไม่ได้ส่งข้อความตอบกลับ')+`\n\n[${d.model||app.selectedModel} • ${app.aiMode}]`});}
+ try{
+  const payload = {
+    model: app.selectedModel,
+    messages: app.messages.map(m=>({role:m.role==='user'?'user':'assistant',content:m.text})),
+    max_tokens: 65536,
+    reasoning_budget: 16384,
+    stream: false,
+    temperature: 0.6,
+    top_p: 0.95
+  };
+  const r = await fetch(app.nvidiaEndpoint,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':'Bearer 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'
+    },
+    body:JSON.stringify(payload)
+  });
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw Error(d.error || `NVIDIA NIM request failed (${r.status})`);
+  app.messages.push({role:'model',text:(d.text||'NVIDIA NIM ไม่ได้ส่งข้อความตอบกลับ')+`\n\n[${d.model||app.selectedModel} • ${app.aiMode}]`});
+}
  catch(e){app.messages.push({role:'model',text:`เชื่อมต่อ NVIDIA NIM ไม่สำเร็จ: ${e.message}. ตรวจสอบว่าโฮสต์มี /api/nvidia, ตั้งค่า NVIDIA_API_KEY ฝั่งเซิร์ฟเวอร์ และบัญชีมีสิทธิ์ใช้งานโมเดลที่เลือก`})}
  finally{app.busy=false;render();setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20)}
 }
@@ -485,7 +506,7 @@ function mountSecureEntry(){
       <div class="gate-footer">หากใช้โดเมนของตนเอง ให้เพิ่มโดเมนนั้นใน Firebase Console → Authentication → Settings → Authorized domains และเปิด Email/Password ใน Sign-in method • TUPP Homework AI เป็นโครงการอิสระ</div>
     </section></div>`;
   document.body.appendChild(gate);
-  const inviteFromUrl=new URLSearchParams(location.search).get('adminInvite');if(inviteFromUrl){document.getElementById('gateRegRole').value='admin';document.getElementById('gateRegInviteToken').value=inviteFromUrl;}
+  const inviteFromUrl=new URLSearchParams(location.search).get('adminInvite');if(inviteFromUrl){ /* registration removed – ignore invite */ }
   const tabs=[...gate.querySelectorAll('[data-gate-tab]')];
   function tab(name){tabs.forEach(b=>b.classList.toggle('active',b.dataset.gateTab===name));gate.querySelectorAll('.gate-form').forEach(f=>f.classList.toggle('active',f.id==='gateCouncilForm'));document.getElementById('gateTitle').textContent='สมาชิกสภา CRT-AI / OCAO';}
   tabs.forEach(b=>b.addEventListener('click',()=>tab(b.dataset.gateTab)));
