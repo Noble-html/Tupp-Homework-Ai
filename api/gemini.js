@@ -4,10 +4,11 @@ const ADMIN_EMAILS = new Set(['rachata.le@gmail.com', '06554@tupp.ac.th', 'thana
 const SCHOOL_EMAIL = /^[^@\s]+@tupp\.ac\.th$/i;
 const MODELS = new Set(['gemini-2.5-flash', 'gemini-2.5-pro']);
 const DEFAULT_MODEL = process.env.GEMINI_MODEL && MODELS.has(process.env.GEMINI_MODEL) ? process.env.GEMINI_MODEL : 'gemini-2.5-flash';
-const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first education assistant for students and teachers. Explain academic topics clearly, be accurate, teach step-by-step, and encourage learning rather than simply copying answers. Never claim to be an official school or government authority or claim Google endorses this project. Do not disclose private student records. If a fact may be current or uncertain, say so.`;
-
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tupp-homework-ai';
 const ALLOWED_ORIGINS = new Set(['https://tupp-ai.com', 'https://www.tupp-ai.com', 'https://tupphomeworkai.vercel.app', 'https://tuppweatherai.vercel.app', 'https://tuppai-delta.vercel.app']);
+const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first education assistant for students and teachers. Explain academic topics clearly, be accurate, teach step-by-step, and encourage learning rather than simply copying answers. Never claim to be an official school or government authority or claim Google endorses this project. Do not disclose private student records. If a fact may be current or uncertain, say so.`;
+const send = (res, status, body) => res.status(status).json(body);
+
 let certCache = { certs: null, exp: 0 };
 async function getCerts() {
   if (certCache.certs && Date.now() < certCache.exp) return certCache.certs;
@@ -18,7 +19,8 @@ async function getCerts() {
   return certCache.certs;
 }
 const b64 = s => Buffer.from(s, 'base64url');
-// Verifies a Firebase ID token with Google's public certs (no service account needed).
+
+// Verifies a Firebase ID token with Google's public certificates (no service account needed).
 async function verifyFirebaseIdToken(req) {
   const fail = () => { const e = new Error('เซสชันหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่'); e.status = 401; return e; };
   const m = String(req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
@@ -36,7 +38,6 @@ async function verifyFirebaseIdToken(req) {
   if (!ok || payload.aud !== PROJECT_ID || payload.iss !== `https://securetoken.google.com/${PROJECT_ID}` || !payload.sub || !(payload.exp > now) || payload.iat > now + 300) throw fail();
   return payload;
 }
-const send = (res, status, body) => res.status(status).json(body);
 
 // AI Studio keys (AIza...) use the Gemini API; "AQ." keys are Google Cloud express-mode keys.
 // Try the endpoint that matches the key format first, then the other one.
@@ -50,11 +51,10 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
   const origin = req.headers.origin;
   if (origin) {
-    const host = String(req.head  const origin = req.headers.origin;
-  if (origin) {
     const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
     let sameHost = false;
-    try { sameHost = !!host && new URL(origin).host.toLowerCase() === host; } catch { return send(res, 403, { error: 'Origin header ไม่ถูกต้อง' }); }
+    try { sameHost = !!host && new URL(origin).host.toLowerCase() === host; }
+    catch { return send(res, 403, { error: 'Origin header ไม่ถูกต้อง' }); }
     if (!sameHost && !ALLOWED_ORIGINS.has(origin)) return send(res, 403, { error: 'คำขอมาจากเว็บไซต์อื่น' });
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
@@ -63,7 +63,9 @@ export default async function handler(req, res) {
   }
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
-rror: 'GEMINI_API_KEY ยังไม่ได้ตั้งค่าใน Environment Variables ของเซิร์ฟเวอร์' });
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return send(res, 503, { error: 'GEMINI_API_KEY ยังไม่ได้ตั้งค่าใน Environment Variables ของเซิร์ฟเวอร์' });
   try {
     const user = await verifyFirebaseIdToken(req);
     const email = String(user.email || '').toLowerCase();
@@ -103,9 +105,8 @@ rror: 'GEMINI_API_KEY ยังไม่ได้ตั้งค่าใน Env
       }
     } finally { clearTimeout(timeout); }
 
-    if (!data) return send(res, last && last.status >= 500 ? 502 : 502, { error: `Gemini API error: ${last?.message || 'unknown'}` });
-    const cand = data?.candidates?.[0];
-    const text = (cand?.content?.parts || []).map(p => p?.text || '').join('').trim();
+    if (!data) return send(res, 502, { error: `Gemini API error: ${last?.message || 'unknown'}` });
+    const text = (data?.candidates?.[0]?.content?.parts || []).map(p => p?.text || '').join('').trim();
     if (!text) return send(res, 200, { text: data?.promptFeedback?.blockReason ? 'Gemini ปฏิเสธการตอบคำถามนี้ กรุณาปรับคำถามแล้วลองใหม่' : '', model, mode, provider: 'Google Gemini' });
     return send(res, 200, { text, model, mode, provider: 'Google Gemini' });
   } catch (error) {
