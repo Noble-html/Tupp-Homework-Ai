@@ -55,7 +55,8 @@ export default async function handler(req, res) {
     let sameHost = false;
     try { sameHost = !!host && new URL(origin).host.toLowerCase() === host; }
     catch { return send(res, 403, { error: 'Origin header ไม่ถูกต้อง' }); }
-    if (!sameHost && !ALLOWED_ORIGINS.has(origin)) return send(res, 403, { error: 'คำขอมาจากเว็บไซต์อื่น' });
+    // Auth is a Bearer ID token (no cookies), so cross-origin calls are safe; access still needs an allowed Google account.
+    void sameHost;
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
