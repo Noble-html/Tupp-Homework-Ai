@@ -1,10 +1,41 @@
-import { verifyBearer } from './_firebaseAdmin.js';
+import crypto from 'node:crypto';
 
 const ADMIN_EMAILS = new Set(['rachata.le@gmail.com', '06554@tupp.ac.th', 'thanawinnoble07@gmail.com', '06546@tupp.ac.th']);
 const SCHOOL_EMAIL = /^[^@\s]+@tupp\.ac\.th$/i;
 const MODELS = new Set(['gemini-2.5-flash', 'gemini-2.5-pro']);
 const DEFAULT_MODEL = process.env.GEMINI_MODEL && MODELS.has(process.env.GEMINI_MODEL) ? process.env.GEMINI_MODEL : 'gemini-2.5-flash';
 const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first education assistant for students and teachers. Explain academic topics clearly, be accurate, teach step-by-step, and encourage learning rather than simply copying answers. Never claim to be an official school or government authority or claim Google endorses this project. Do not disclose private student records. If a fact may be current or uncertain, say so.`;
+
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tupp-homework-ai';
+const ALLOWED_ORIGINS = new Set(['https://tupp-ai.com', 'https://www.tupp-ai.com', 'https://tupphomeworkai.vercel.app', 'https://tuppweatherai.vercel.app', 'https://tuppai-delta.vercel.app']);
+let certCache = { certs: null, exp: 0 };
+async function getCerts() {
+  if (certCache.certs && Date.now() < certCache.exp) return certCache.certs;
+  const r = await fetch('https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com');
+  if (!r.ok) { const e = new Error('ตรวจสอบการเข้าสู่ระบบไม่ได้ชั่วคราว กรุณาลองใหม่'); e.status = 503; throw e; }
+  const m = /max-age=(\d+)/.exec(r.headers.get('cache-control') || '');
+  certCache = { certs: await r.json(), exp: Date.now() + (m ? Number(m[1]) : 3600) * 1000 };
+  return certCache.certs;
+}
+const b64 = s => Buffer.from(s, 'base64url');
+// Verifies a Firebase ID token with Google's public certs (no service account needed).
+async function verifyFirebaseIdToken(req) {
+  const fail = () => { const e = new Error('เซสชันหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่'); e.status = 401; return e; };
+  const m = String(req.headers.authorization || '').match(/^Bearer\s+(.+)$/i);
+  if (!m) throw fail();
+  const parts = m[1].split('.');
+  if (parts.length !== 3) throw fail();
+  let header, payload;
+  try { header = JSON.parse(b64(parts[0])); payload = JSON.parse(b64(parts[1])); } catch { throw fail(); }
+  if (header.alg !== 'RS256' || !header.kid) throw fail();
+  const cert = (await getCerts())[header.kid];
+  if (!cert) throw fail();
+  let ok = false;
+  try { ok = crypto.createVerify('RSA-SHA256').update(parts[0] + '.' + parts[1]).verify(cert, b64(parts[2])); } catch { ok = false; }
+  const now = Math.floor(Date.now() / 1000);
+  if (!ok || payload.aud !== PROJECT_ID || payload.iss !== `https://securetoken.google.com/${PROJECT_ID}` || !payload.sub || !(payload.exp > now) || payload.iat > now + 300) throw fail();
+  return payload;
+}
 const send = (res, status, body) => res.status(status).json(body);
 
 // AI Studio keys (AIza...) use the Gemini API; "AQ." keys are Google Cloud express-mode keys.
@@ -17,17 +48,24 @@ function endpoints(model, key) {
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
-  if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
   const origin = req.headers.origin;
   if (origin) {
+    const host = String(req.head  const origin = req.headers.origin;
+  if (origin) {
     const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim().toLowerCase();
-    try { if (!host || new URL(origin).host.toLowerCase() !== host) return send(res, 403, { error: 'คำขอมาจากเว็บไซต์อื่น' }); }
-    catch { return send(res, 403, { error: 'Origin header ไม่ถูกต้อง' }); }
+    let sameHost = false;
+    try { sameHost = !!host && new URL(origin).host.toLowerCase() === host; } catch { return send(res, 403, { error: 'Origin header ไม่ถูกต้อง' }); }
+    if (!sameHost && !ALLOWED_ORIGINS.has(origin)) return send(res, 403, { error: 'คำขอมาจากเว็บไซต์อื่น' });
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   }
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return send(res, 503, { error: 'GEMINI_API_KEY ยังไม่ได้ตั้งค่าใน Environment Variables ของเซิร์ฟเวอร์' });
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'POST') return send(res, 405, { error: 'Method not allowed' });
+rror: 'GEMINI_API_KEY ยังไม่ได้ตั้งค่าใน Environment Variables ของเซิร์ฟเวอร์' });
   try {
-    const user = await verifyBearer(req);
+    const user = await verifyFirebaseIdToken(req);
     const email = String(user.email || '').toLowerCase();
     const allowed = user.email_verified === true && (SCHOOL_EMAIL.test(email) || ADMIN_EMAILS.has(email));
     if (!allowed) return send(res, 403, { error: 'อนุญาตเฉพาะบัญชี Google ของโรงเรียน (@tupp.ac.th) หรือผู้ดูแลที่ได้รับอนุญาต' });

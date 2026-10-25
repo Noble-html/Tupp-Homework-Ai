@@ -240,7 +240,9 @@ async function sendAI(){
  app.messages.push({role:'user',text:q});app.busy=true;render();
  try{
   const token=await user.getIdToken();
-  const r=await fetch(app.aiEndpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({model:app.selectedModel,mode:app.aiMode==='chat'?'chat':'reasoning',messages:app.messages.filter(m=>m.text).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}))})});
+  const opts={method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({model:app.selectedModel,mode:app.aiMode==='chat'?'chat':'reasoning',messages:app.messages.filter(m=>m.text).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text}))})};
+  let r=await fetch(app.aiEndpoint,opts);
+  if(r.status===404||r.status===405){try{const r2=await fetch('https://tupphomeworkai.vercel.app/api/gemini',opts);if(r2.status!==404&&r2.status!==405)r=r2}catch{}}
   const d=await r.json().catch(()=>({}));
   if(!r.ok)throw Error(d.error||`Gemini request failed (${r.status})`);
   app.messages.push({role:'model',text:(d.text||'Gemini ไม่ได้ส่งข้อความตอบกลับ')+`\n\n[${d.model||app.selectedModel} • ${app.aiMode}]`});
