@@ -87,24 +87,40 @@ export default async function handler(req, res) {
     const system = SYSTEM_PROMPT + (mode === 'reasoning'
       ? ' For academic questions, reason carefully and present a clear step-by-step explanation, with a concise final summary.'
       : ' Prefer a direct, conversational answer. Keep it clear and concise unless more detail is requested.');
-    const payload = JSON.stringify({
+    const baseBody = {
       systemInstruction: { parts: [{ text: system }] },
       contents,
       generationConfig: { temperature: mode === 'reasoning' ? 0.3 : 0.6, topP: 0.9, maxOutputTokens: 8192 },
-    });
+    };
+    // Keep "thinking" short so simple questions answer in seconds; fall back to a plain request if rejected.
+    const level = mode === 'reasoning' ? 'low' : 'minimal';
+    const payloads = [
+      JSON.stringify({ ...baseBody, generationConfig: { ...baseBody.generationConfig, thinkingConfig: { thinkingLevel: level } } }),
+      JSON.stringify(baseBody),
+    ];
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 55000);
+    const started = Date.now();
     let data = null, last = null;
-    try {
-      for (const ep of endpoints(model, apiKey)) {
-        const response = await fetch(ep.url, { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json', ...ep.headers }, body: payload });
-        const json = await response.json().catch(() => ({}));
-        if (response.ok) { data = json; break; }
+    outer:
+    for (const ep of endpoints(model, apiKey)) {
+      for (const payload of payloads) {
+        if (Date.now() - started > 45000) break outer;
+        let response, json;
+        try {
+          response = await fetch(ep.url, { method: 'POST', signal: AbortSignal.timeout(25000), headers: { 'Content-Type': 'application/json', ...ep.headers }, body: payload });
+          json = await response.json().catch(() => ({}));
+        } catch (err) {
+          last = { status: 504, message: err?.name === 'TimeoutError' ? 'Gemini ตอบช้าเกินไป' : (err?.message || 'network error') };
+          continue outer;
+        }
+        if (response.ok) { data = json; break outer; }
         last = { status: response.status, message: json?.error?.message || 'Gemini API error' };
-        if (![400, 401, 403, 404].includes(response.status)) break;
+        if (response.status === 400) continue;            // maybe unsupported option -> try plain payload / other endpoint
+        if ([401, 403, 404].includes(response.status)) continue outer;
+        break outer;
       }
-    } finally { clearTimeout(timeout); }
+    }
+    const elapsedMs = Date.now() - started;
 
     if (!data) return send(res, 502, { error: `Gemini API error: ${last?.message || 'unknown'}` });
     const cand = data?.candidates?.[0];
@@ -113,7 +129,7 @@ export default async function handler(req, res) {
       const why = data?.promptFeedback?.blockReason ? `blocked: ${data.promptFeedback.blockReason}` : (cand?.finishReason ? `finishReason: ${cand.finishReason}` : 'empty response');
       return send(res, 502, { error: `Gemini ไม่ได้ส่งคำตอบกลับ (${why}) กรุณาลองถามใหม่หรือเปลี่ยนโมเดล` });
     }
-    return send(res, 200, { text, model, mode, provider: 'Google Gemini' });
+    return send(res, 200, { text, model, mode, provider: 'Google Gemini', ms: elapsedMs });
   } catch (error) {
     const status = Number(error?.status) || 500;
     return send(res, status, { error: error?.name === 'AbortError' ? 'Gemini ใช้เวลาตอบนานเกินไป กรุณาลองใหม่' : error?.message || 'Server error' });

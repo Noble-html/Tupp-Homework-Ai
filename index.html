@@ -246,7 +246,7 @@ async function sendAI(){
   if(r.status===404||r.status===405){try{const r2=await fetch('https://tupphomeworkai.vercel.app/api/gemini',opts);if(r2.status!==404&&r2.status!==405)r=r2}catch{}}
   const d=await r.json().catch(()=>({}));
   clearTimeout(tm);if(!r.ok)throw Error(d.error||`Gemini request failed (${r.status})`);
-  app.messages.push({role:'model',text:(d.text||'Gemini ไม่ได้ส่งข้อความตอบกลับ')+`\n\n[${d.model||app.selectedModel} • ${app.aiMode}]`});
+  app.messages.push({role:'model',text:(d.text||'Gemini ไม่ได้ส่งข้อความตอบกลับ')+`\n\n[${d.model||app.selectedModel} • ${app.aiMode}${d.ms?' • '+(d.ms/1000).toFixed(1)+'s':''}]`});
  }
  catch(e){app.messages.push({role:'model',text:`เชื่อมต่อ Gemini ไม่สำเร็จ: ${e.name==='AbortError'?'ใช้เวลาตอบนานเกินไป กรุณาลองใหม่':e.message}`})}
  finally{app.busy=false;render();setTimeout(()=>document.getElementById('chatLog')?.scrollTo({top:999999,behavior:'smooth'}),20)}
