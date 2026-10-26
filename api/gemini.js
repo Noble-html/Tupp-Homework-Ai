@@ -100,36 +100,41 @@ export default async function handler(req, res) {
     ];
 
     const started = Date.now();
-    let data = null, last = null;
-    outer:
-    for (const ep of endpoints(model, apiKey)) {
-      for (const payload of payloads) {
-        if (Date.now() - started > 45000) break outer;
-        let response, json;
-        try {
-          response = await fetch(ep.url, { method: 'POST', signal: AbortSignal.timeout(25000), headers: { 'Content-Type': 'application/json', ...ep.headers }, body: payload });
-          json = await response.json().catch(() => ({}));
-        } catch (err) {
-          last = { status: 504, message: err?.name === 'TimeoutError' ? 'Gemini ตอบช้าเกินไป' : (err?.message || 'network error') };
-          continue outer;
+    const order = [model, ...[...MODELS].filter(m => m !== model)];   // fall back to the other model when one is overloaded
+    let data = null, last = null, usedModel = model;
+    modelLoop:
+    for (const mdl of order) {
+      epLoop:
+      for (const ep of endpoints(mdl, apiKey)) {
+        for (const payload of payloads) {
+          if (Date.now() - started > 48000) break modelLoop;
+          let response, json;
+          try {
+            response = await fetch(ep.url, { method: 'POST', signal: AbortSignal.timeout(25000), headers: { 'Content-Type': 'application/json', ...ep.headers }, body: payload });
+            json = await response.json().catch(() => ({}));
+          } catch (err) {
+            last = { status: 504, message: err?.name === 'TimeoutError' ? 'Gemini ตอบช้าเกินไป' : (err?.message || 'network error') };
+            continue epLoop;
+          }
+          if (response.ok) { data = json; usedModel = mdl; break modelLoop; }
+          last = { status: response.status, message: json?.error?.message || 'Gemini API error' };
+          if (response.status === 400) continue;                               // unsupported option -> try plain payload
+          if ([401, 403, 404].includes(response.status)) continue epLoop;     // wrong endpoint/key type -> try the other endpoint
+          if ([429, 500, 502, 503, 504].includes(response.status)) continue modelLoop; // overloaded -> try the other model
+          break modelLoop;
         }
-        if (response.ok) { data = json; break outer; }
-        last = { status: response.status, message: json?.error?.message || 'Gemini API error' };
-        if (response.status === 400) continue;            // maybe unsupported option -> try plain payload / other endpoint
-        if ([401, 403, 404].includes(response.status)) continue outer;
-        break outer;
       }
     }
     const elapsedMs = Date.now() - started;
 
-    if (!data) return send(res, 502, { error: `Gemini API error: ${last?.message || 'unknown'}` });
+    if (!data) return send(res, 502, { error: /high demand|overloaded|unavailable/i.test(last?.message || '') || [429, 503].includes(last?.status) ? 'Gemini กำลังมีผู้ใช้งานหนาแน่นมาก (ทั้งสองโมเดล) กรุณารอสักครู่แล้วลองใหม่' : `Gemini API error: ${last?.message || 'unknown'}` });
     const cand = data?.candidates?.[0];
     const text = (cand?.content?.parts || []).filter(p => p && p.thought !== true).map(p => p?.text || '').join('').trim();
     if (!text) {
       const why = data?.promptFeedback?.blockReason ? `blocked: ${data.promptFeedback.blockReason}` : (cand?.finishReason ? `finishReason: ${cand.finishReason}` : 'empty response');
       return send(res, 502, { error: `Gemini ไม่ได้ส่งคำตอบกลับ (${why}) กรุณาลองถามใหม่หรือเปลี่ยนโมเดล` });
     }
-    return send(res, 200, { text, model, mode, provider: 'Google Gemini', ms: elapsedMs });
+    return send(res, 200, { text, model: usedModel, mode, provider: 'Google Gemini', ms: elapsedMs });
   } catch (error) {
     const status = Number(error?.status) || 500;
     return send(res, status, { error: error?.name === 'AbortError' ? 'Gemini ใช้เวลาตอบนานเกินไป กรุณาลองใหม่' : error?.message || 'Server error' });
