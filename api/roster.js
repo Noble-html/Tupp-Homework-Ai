@@ -59,11 +59,24 @@ async function loadRoster(force = false) {
   if (!force && cache.rows && Date.now() < cache.exp) return cache.rows;
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${encodeURIComponent(SHEET_GID)}`;
   const unreadable = () => { const e = new Error('อ่าน Google Sheet รายชื่อครูไม่ได้ ตรวจสอบว่าแชร์เป็น Anyone with the link (Viewer)'); e.status = 502; return e; };
-  let r;
-  try { r = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(10000) }); } catch { throw unreadable(); }
-  if (!r.ok) throw unreadable();
-  const text = await r.text();
-  if (/^\s*<(!doctype|html)/i.test(text)) throw unreadable();
+  const id = SHEET_ID, gid = encodeURIComponent(SHEET_GID);
+  const candidates = [
+    process.env.TEACHER_SHEET_CSV_URL,
+    `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`,
+    `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`,
+    `https://docs.google.com/spreadsheets/d/${id}/export?format=csv`,
+  ].filter(Boolean);
+  const tried = [];
+  let text = null;
+  for (const u of candidates) {
+    try {
+      const resp = await fetch(u, { redirect: 'follow', signal: AbortSignal.timeout(10000) });
+      const body = await resp.text();
+      if (resp.ok && !/^\s*<(!doctype|html)/i.test(body)) { text = body; break; }
+      tried.push(`${resp.status}${/accounts\.google\.com|ServiceLogin/i.test(String(resp.url) + body.slice(0, 3000)) ? ' ต้องล็อกอิน' : ''}`);
+    } catch (err) { tried.push(err?.name === 'TimeoutError' ? 'timeout' : 'network'); }
+  }
+  if (text === null) { const e = new Error(`อ่าน Google Sheet รายชื่อครูไม่ได้ (Google ตอบ: ${tried.join(' / ')}) ตรวจสอบว่าแชร์เป็น Anyone with the link (Viewer) หรือใช้ File > Share > Publish to web`); e.status = 502; throw e; }
   const [head = [], ...body] = parseCsv(text);
   const idx = name => head.findIndex(h => String(h).trim().toLowerCase() === name);
   const [ie, inm, isub, icl] = ['email', 'name', 'subject', 'classes'].map(idx);
