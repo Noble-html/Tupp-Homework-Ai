@@ -2,8 +2,8 @@ import crypto from 'node:crypto';
 
 const ADMIN_EMAILS = new Set(['rachata.le@gmail.com', '06554@tupp.ac.th', 'thanawinnoble07@gmail.com', '06546@tupp.ac.th']);
 const SCHOOL_EMAIL = /^[^@\s]+@tupp\.ac\.th$/i;
-const MODELS = new Set(['gemini-3.8-flash', 'gemini-3.5-flash-lite']);
-const DEFAULT_MODEL = process.env.GEMINI_MODEL && MODELS.has(process.env.GEMINI_MODEL) ? process.env.GEMINI_MODEL : 'gemini-3.8-flash';
+const MODELS = new Set(['gemini-3.5-flash-lite', 'gemini-3.5-flash']);
+const DEFAULT_MODEL = process.env.GEMINI_MODEL && MODELS.has(process.env.GEMINI_MODEL) ? process.env.GEMINI_MODEL : 'gemini-3.5-flash-lite';
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'tupp-homework-ai';
 const ALLOWED_ORIGINS = new Set(['https://tupp-ai.com', 'https://www.tupp-ai.com', 'https://tupphomeworkai.vercel.app', 'https://tuppweatherai.vercel.app', 'https://tuppai-delta.vercel.app']);
 const SYSTEM_PROMPT = `You are TUPP Homework AI, a helpful Thai-first education assistant for students and teachers. Explain academic topics clearly, be accurate, teach step-by-step, and encourage learning rather than simply copying answers. Never claim to be an official school or government authority or claim Google endorses this project. Do not disclose private student records. If a fact may be current or uncertain, say so.`;

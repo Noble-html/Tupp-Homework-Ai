@@ -44,7 +44,7 @@ Optional: `ADMIN_RECOVERY_SECRET`, `GEMINI_MODEL`.
 
 ## Gemini model routing
 
-The browser sends a Firebase ID token to `/api/gemini`. Allowed models: `gemini-3.8-flash` (default) and `gemini-3.5-flash-lite`. Admin page: `/admin` (Google sign-in, allow-listed accounts only).
+The browser sends a Firebase ID token to `/api/gemini`. Allowed models: `gemini-3.5-flash-lite` (default) and `gemini-3.5-flash`. Admin page: `/admin` (Google sign-in, allow-listed accounts only).
 
 ## Commands
 
