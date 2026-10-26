@@ -97,10 +97,10 @@ export default async function handler(req, res) {
     const isAdmin = ADMIN_EMAILS.has(email);
     if (user.email_verified !== true || !(SCHOOL_EMAIL.test(email) || isAdmin)) return send(res, 403, { error: 'อนุญาตเฉพาะบัญชี @tupp.ac.th หรือผู้ดูแลที่ได้รับอนุญาต' });
     const wantAll = isAdmin && /[?&]all=1(&|$)/.test(String(req.url || ''));
-    let row = null, sheetError = null, all = null;
-    try { const rows = await loadRoster(wantAll); row = rows.find(r => r.email === email) || null; if (wantAll) all = rows; } catch (e) { sheetError = e.message; }
+    let row = null, sheetError = null, all = null, allClasses = [];
+    try { const rows = await loadRoster(wantAll); row = rows.find(r => r.email === email) || null; if (wantAll) all = rows; allClasses = [...new Set(rows.flatMap(r => r.classes))].sort(); } catch (e) { sheetError = e.message; }
     const role = isAdmin ? 'admin' : row ? 'teacher' : 'student';
-    return send(res, 200, { role, email, name: row?.name || '', subject: row?.subject || '', classes: row?.classes || [], ...(all ? { roster: all } : {}), ...(sheetError ? { warning: sheetError } : {}) });
+    return send(res, 200, { role, email, name: row?.name || '', subject: row?.subject || '', classes: row?.classes || [], allClasses, ...(all ? { roster: all } : {}), ...(sheetError ? { warning: sheetError } : {}) });
   } catch (error) {
     return send(res, Number(error?.status) || 500, { error: error?.message || 'Server error' });
   }
