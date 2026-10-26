@@ -399,6 +399,53 @@ wire=function(){
 };
 // ===== end V51 =====
 
+// ===== V52: live teacher roster =====
+const ROSTER_SHEET_URL='https://docs.google.com/spreadsheets/d/169h60harrex3scxsnYNUotKebYPMxSM_u-L7Ae9z19M/edit';
+let rosterLast=0;
+async function refreshRole(force){
+ const u=state.auth?.currentUser;if(!u||!app.session)return;
+ if(!force&&Date.now()-rosterLast<15000)return;rosterLast=Date.now();
+ const roster=await fetchRoster(u);if(!roster)return;
+ const before=JSON.stringify(app.userProfile||{});
+ let p={...(app.userProfile||{})};
+ if(roster.role==='teacher'||roster.role==='admin')p={...p,role:'teacher',teacherName:roster.name||'',teacherSubject:roster.subject||'',teacherClasses:roster.classes||[],isAdmin:roster.role==='admin'};
+ else if(p.role==='teacher'&&'teacherClasses' in p&&!isAdminEmail(u.email))p={...p,role:'student',teacherName:'',teacherSubject:'',teacherClasses:[],isAdmin:false};
+ if(JSON.stringify(p)!==before){app.userProfile=p;render()}
+}
+async function loadRosterAll(){
+ const u=state.auth?.currentUser;
+ if(!u||!isAdminEmail(u.email)){app.rosterLoading=false;return}
+ try{
+  const token=await u.getIdToken();const opts={headers:{Authorization:'Bearer '+token}};
+  let r=await fetch('/api/roster?all=1',opts);
+  if(r.status===404||r.status===405){try{const r2=await fetch('https://tupphomeworkai.vercel.app/api/roster?all=1',opts);if(r2.status!==404&&r2.status!==405)r=r2}catch{}}
+  const d=await r.json().catch(()=>({}));
+  if(r.ok){app.rosterAll=d.roster||[];app.rosterMsg=d.warning||(`โหลดแล้ว ${(d.roster||[]).length} คน • ${new Date().toLocaleTimeString()}`);app.rosterLoaded=true}
+  else app.rosterMsg=d.error||'โหลดรายชื่อไม่สำเร็จ';
+ }catch(e){app.rosterMsg=e.message}
+ app.rosterLoading=false;
+ if(app.page==='admin')render();
+}
+const _navV52=nav;
+nav=function(k){_navV52(k);refreshRole()};
+const _adminV52=admin;
+admin=function(){
+ const h=_adminV52();
+ if(!app.rosterLoaded&&!app.rosterLoading&&state.auth?.currentUser){app.rosterLoading=true;setTimeout(loadRosterAll,0)}
+ const rows=(app.rosterAll||[]).map(t=>`<div class="class-row"><b>${esc(t.name||'-')}</b><span>${esc(t.email)}</span><span>${esc(t.subject||'-')}</span><span>${esc((t.classes||[]).join(', ')||'-')}</span></div>`).join('')||'<div class="empty">ยังไม่มีครูในชีต (แถวตัวอย่างถูกข้าม)</div>';
+ const card=`<div class="ops-card wide"><h3>07 / TEACHER ROSTER (GOOGLE SHEET)</h3><p class="muted">เพิ่มหรือแก้ไขรายชื่อใน Google Sheet (Google บันทึกให้อัตโนมัติ) แล้วกดรีเฟรชที่นี่ รายชื่อจะอัปเดตบนเว็บภายในไม่กี่วินาที</p><div class="toolbar"><a class="gold" style="padding:10px 14px;text-decoration:none;border-radius:10px" href="${ROSTER_SHEET_URL}" target="_blank" rel="noopener">OPEN GOOGLE SHEET</a><button class="primary" id="refreshRoster">REFRESH ROSTER NOW</button></div><div class="class-list">${rows}</div><div class="form-msg" role="status">${esc(app.rosterMsg||'')}</div></div>`;
+ const k=h.lastIndexOf('</div></section>');
+ return k<0?h:h.slice(0,k)+card+h.slice(k);
+};
+const _wireV52=wire;
+wire=function(){
+ _wireV52();
+ document.getElementById('refreshRoster')?.addEventListener('click',async()=>{app.rosterMsg='กำลังโหลด…';app.rosterLoading=true;render();await loadRosterAll();await refreshRole(true)});
+};
+window.addEventListener('focus',()=>refreshRole());
+setInterval(()=>refreshRole(),60000);
+// ===== end V52 =====
+
 document.addEventListener('DOMContentLoaded',()=>{applyRoute();render();restoreAuth()});
 </script>
 </body>

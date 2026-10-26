@@ -55,8 +55,8 @@ function parseCsv(text) {
 }
 
 let cache = { rows: null, exp: 0 };
-async function loadRoster() {
-  if (cache.rows && Date.now() < cache.exp) return cache.rows;
+async function loadRoster(force = false) {
+  if (!force && cache.rows && Date.now() < cache.exp) return cache.rows;
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${encodeURIComponent(SHEET_GID)}`;
   const unreadable = () => { const e = new Error('อ่าน Google Sheet รายชื่อครูไม่ได้ ตรวจสอบว่าแชร์เป็น Anyone with the link (Viewer)'); e.status = 502; return e; };
   let r;
@@ -76,7 +76,7 @@ async function loadRoster() {
       classes: String(icl >= 0 ? r[icl] || '' : '').split(/[,;\n]/).map(x => x.trim()).filter(Boolean),
     }))
     .filter(r => r.email && !IGNORED_EMAILS.has(r.email));
-  cache = { rows, exp: Date.now() + 60000 };
+  cache = { rows, exp: Date.now() + 10000 };
   return rows;
 }
 
@@ -96,10 +96,11 @@ export default async function handler(req, res) {
     const email = String(user.email || '').toLowerCase();
     const isAdmin = ADMIN_EMAILS.has(email);
     if (user.email_verified !== true || !(SCHOOL_EMAIL.test(email) || isAdmin)) return send(res, 403, { error: 'อนุญาตเฉพาะบัญชี @tupp.ac.th หรือผู้ดูแลที่ได้รับอนุญาต' });
-    let row = null, sheetError = null;
-    try { row = (await loadRoster()).find(r => r.email === email) || null; } catch (e) { sheetError = e.message; }
+    const wantAll = isAdmin && /[?&]all=1(&|$)/.test(String(req.url || ''));
+    let row = null, sheetError = null, all = null;
+    try { const rows = await loadRoster(wantAll); row = rows.find(r => r.email === email) || null; if (wantAll) all = rows; } catch (e) { sheetError = e.message; }
     const role = isAdmin ? 'admin' : row ? 'teacher' : 'student';
-    return send(res, 200, { role, email, name: row?.name || '', subject: row?.subject || '', classes: row?.classes || [], ...(sheetError ? { warning: sheetError } : {}) });
+    return send(res, 200, { role, email, name: row?.name || '', subject: row?.subject || '', classes: row?.classes || [], ...(all ? { roster: all } : {}), ...(sheetError ? { warning: sheetError } : {}) });
   } catch (error) {
     return send(res, Number(error?.status) || 500, { error: error?.message || 'Server error' });
   }
