@@ -107,8 +107,12 @@ export default async function handler(req, res) {
     } finally { clearTimeout(timeout); }
 
     if (!data) return send(res, 502, { error: `Gemini API error: ${last?.message || 'unknown'}` });
-    const text = (data?.candidates?.[0]?.content?.parts || []).map(p => p?.text || '').join('').trim();
-    if (!text) return send(res, 200, { text: data?.promptFeedback?.blockReason ? 'Gemini ปฏิเสธการตอบคำถามนี้ กรุณาปรับคำถามแล้วลองใหม่' : '', model, mode, provider: 'Google Gemini' });
+    const cand = data?.candidates?.[0];
+    const text = (cand?.content?.parts || []).filter(p => p && p.thought !== true).map(p => p?.text || '').join('').trim();
+    if (!text) {
+      const why = data?.promptFeedback?.blockReason ? `blocked: ${data.promptFeedback.blockReason}` : (cand?.finishReason ? `finishReason: ${cand.finishReason}` : 'empty response');
+      return send(res, 502, { error: `Gemini ไม่ได้ส่งคำตอบกลับ (${why}) กรุณาลองถามใหม่หรือเปลี่ยนโมเดล` });
+    }
     return send(res, 200, { text, model, mode, provider: 'Google Gemini' });
   } catch (error) {
     const status = Number(error?.status) || 500;
